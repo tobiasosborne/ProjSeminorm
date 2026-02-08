@@ -38,6 +38,9 @@ theorem isLUB_opNorm (f : E →L[𝕜] F) :
 /-- There exists a sequence of elements whose norm ratios converge to the operator norm. -/
 theorem exists_norming_sequence (f : E →L[𝕜] F) :
     ∃ u : ℕ → E, Tendsto (fun n => ‖f (u n)‖ / ‖u n‖) atTop (nhds ‖f‖) := by
-  sorry
+  obtain ⟨seq, -, -, htend, hmem⟩ :=
+    (isLUB_opNorm f).exists_seq_monotone_tendsto (Set.range_nonempty _)
+  choose w hw using hmem
+  exact ⟨w, htend.congr fun n => (hw n).symm⟩
 
 end ContinuousLinearMap
