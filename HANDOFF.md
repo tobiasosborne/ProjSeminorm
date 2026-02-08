@@ -740,6 +740,8 @@ lean_local_search: "exists_norming_sequence"
 - Step 3 fully complete. 11 of 22 issues closed.
 - Next actionable: `ProjSeminorm-dtv.12` (Step 4: create WithBidual.lean)
 
+**Build fix:** `DualDistribL.lean` was never compiled by `lake build` — missing `open scoped TensorProduct BigOperators` and not registered in root module. Fixed both. Verified 0 sorries, 0 custom axioms (only propext/Classical.choice/Quot.sound).
+
 **Next session should:**
 1. `bd ready` to see available work
 2. Start Step 4: prove `projectiveSeminorm_tprod_of_bidual_iso` using norming sequences + dualDistribL
