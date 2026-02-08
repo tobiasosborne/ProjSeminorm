@@ -745,3 +745,35 @@ lean_local_search: "exists_norming_sequence"
 **Next session should:**
 1. `bd ready` to see available work
 2. Start Step 4: prove `projectiveSeminorm_tprod_of_bidual_iso` using norming sequences + dualDistribL
+
+### Session 9 (2026-02-08): Step 4 outer framework — 1 sorry remains
+
+**What was done:**
+- Closed `ProjSeminorm-dtv.12` (build verification)
+- Built the outer proof framework for `projectiveSeminorm_tprod_of_bidual_iso`:
+  - Norming sequences via `ContinuousLinearMap.exists_norming_sequence` + `choose`
+  - Product convergence via `tendsto_finset_prod`
+  - Limit passage via `le_of_tendsto'`
+- One sorry remains: the `hle` step (each product term ≤ projectiveSeminorm)
+- Build clean: 2315 jobs, 0 errors, 1 sorry warning
+
+**Key learnings for filling the sorry (documented in file docstring):**
+- `Finset.prod_div_distrib` requires `CommGroup` — `ℝ` is NOT a `CommGroup` under ×.
+  Use `simp_rw [div_eq_mul_inv, Finset.prod_mul_distrib, Finset.prod_inv_distrib]`
+  then `mul_inv_le_iff₀` instead.
+- `map_nonneg` fails for `projectiveSeminorm` (no `Preorder` on tensor product).
+  Use `apply_nonneg projectiveSeminorm` or `(projectiveSeminorm ...).nonneg'`.
+- `norm_pos_iff` for `StrongDual` needs type annotation due to `hasOpNorm` vs
+  `NormedAddGroup.toNorm` mismatch.
+- The calc chain itself works: `norm_prod` → `dualDistribL_tprod_apply` →
+  `le_opNorm` → `injectiveSeminorm_le_projectiveSeminorm` →
+  `norm_dualDistribL_tprod_le` → `mul_comm`.
+- `inclusionInDoubleDual_apply` simplifies `incl(m)(f)` to `f(m)`.
+- `gcongr` handles the monotonicity steps in the calc chain.
+
+**Current state:**
+- 12 of 22 issues closed. `ProjSeminorm-dtv.13` in progress (sorry in `hle`).
+
+**Next session should:**
+1. Fill the `hle` sorry using the documented approach (zero case + nonzero calc)
+2. Then proceed to Step 5 (RCLike corollary — should be ~5 LOC)

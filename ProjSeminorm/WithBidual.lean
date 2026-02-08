@@ -7,18 +7,37 @@ The main theorem: the projective seminorm is multiplicative on pure tensors,
 assuming each factor embeds isometrically into its bidual. This is Step 4
 of the proof plan.
 
-## Strategy
+## Proof structure (compiles, sorry in `hle`)
 
-For the lower bound `∏ i, ‖m i‖ ≤ projectiveSeminorm (⨂ₜ[𝕜] i, m i)`:
+The outer framework works:
+1. Norming sequences from `exists_norming_sequence` (Step 2)
+2. Product convergence via `tendsto_finset_prod`
+3. Limit passage via `le_of_tendsto'`
 
-1. For each `i`, use `h_bidual` to get `‖inclusionInDoubleDual (m i)‖ = ‖m i‖`,
-   which means `sup_{‖f‖≤1} |f(m i)| = ‖m i‖`.
-2. For any `f : Π i, StrongDual 𝕜 (E i)` with `‖f i‖ ≤ 1`:
-   `|∏ i, f i (m i)| = |dualDistribL(⨂ f i)(⨂ m i)| ≤ ‖dualDistribL(⨂ f i)‖ · projSeminorm(⨂ m i)`
-   and `‖dualDistribL(⨂ f i)‖ ≤ ∏ ‖f i‖ ≤ 1`.
-3. So `∏ |f i (m i)| ≤ projSeminorm(⨂ m i)`.
-4. Taking sup over `f i` with `‖f i‖ ≤ 1` gives `∏ ‖inclusionInDoubleDual(m i)‖ ≤ projSeminorm`.
-5. By `h_bidual`, the left side equals `∏ ‖m i‖`.
+The sorry is in `hle`: showing each product term ≤ projectiveSeminorm.
+
+## Learnings for filling the sorry
+
+The `hle` proof splits into two cases:
+
+**Zero case** (`∃ i, u i n = 0`): Product has a zero factor, so it's 0.
+- `Finset.prod_eq_zero` works for the product = 0 step
+- Need `projectiveSeminorm.nonneg'` or `apply_nonneg` (NOT `map_nonneg`,
+  which needs `OrderHomClass`; NOT `Seminorm.nonneg`, which doesn't exist)
+
+**Nonzero case** (`∀ i, u i n ≠ 0`): The duality calc chain.
+- `norm_pos_iff` for `StrongDual` needs explicit type annotation — the norm
+  instance is `ContinuousLinearMap.hasOpNorm`, not `NormedAddGroup.toNorm`.
+  Fix: use `(norm_pos_iff (α := StrongDual 𝕜 (E i))).mpr` or
+  `ContinuousLinearMap.norm_pos_iff.mpr`.
+- `Finset.prod_div_distrib` requires `CommGroup` — `ℝ` is NOT a `CommGroup`.
+  Instead use: `simp_rw [div_eq_mul_inv, Finset.prod_mul_distrib,
+  Finset.prod_inv_distrib]` then `mul_inv_le_iff₀`.
+- The calc chain `∏ ‖g(m)‖ ≤ (∏ ‖g‖) * projSem` via:
+  `norm_prod` → `dualDistribL_tprod_apply` → `le_opNorm` →
+  `injectiveSeminorm_le_projectiveSeminorm` → `norm_dualDistribL_tprod_le`
+- `inclusionInDoubleDual_apply` exists and simplifies `incl(m)(f) = f(m)`.
+- `gcongr` works for the monotonicity steps.
 -/
 
 open scoped TensorProduct BigOperators
@@ -28,18 +47,35 @@ namespace ProjSeminorm
 
 variable {ι : Type*} [Fintype ι]
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
-variable {E : ι → Type*} [∀ i, SeminormedAddCommGroup (E i)] [∀ i, NormedSpace 𝕜 (E i)]
+variable {E : ι → Type*}
+  [∀ i, SeminormedAddCommGroup (E i)] [∀ i, NormedSpace 𝕜 (E i)]
 
-/-- The projective seminorm is multiplicative on pure tensors, assuming bidual isometry. -/
+/-- The projective seminorm is multiplicative on pure tensors,
+assuming bidual isometry. -/
 theorem projectiveSeminorm_tprod_of_bidual_iso
     (m : Π i, E i)
     (h_bidual : ∀ i, ‖inclusionInDoubleDual 𝕜 _ (m i)‖ = ‖m i‖) :
     projectiveSeminorm (⨂ₜ[𝕜] i, m i) = ∏ i, ‖m i‖ := by
   apply le_antisymm (projectiveSeminorm_tprod_le m)
-  -- Lower bound: use dualDistribL + h_bidual
-  -- For any representation ⨂ₜ m i = ∑ ⨂ₜ v_j, we need ∏ ‖m i‖ ≤ ∑ ∏ ‖v_j i‖.
-  -- By duality: for f with ‖f i‖ ≤ 1, |∏ f i (m i)| ≤ projectiveSeminorm (⨂ₜ m i).
-  -- Taking sup and using h_bidual gives the result.
-  sorry
+  -- For each i, get a norming sequence for inclusionInDoubleDual(m i)
+  choose u hu using fun i =>
+    ContinuousLinearMap.exists_norming_sequence
+      ((inclusionInDoubleDual 𝕜 (E i)) (m i))
+  -- Rewrite limit target using h_bidual
+  simp_rw [h_bidual] at hu
+  -- Product of convergent sequences converges to product of limits
+  have hprod : Tendsto
+      (fun n => ∏ i : ι,
+        ‖(inclusionInDoubleDual 𝕜 (E i) (m i)) (u i n)‖ / ‖u i n‖)
+      atTop (nhds (∏ i : ι, ‖m i‖)) :=
+    tendsto_finset_prod _ (fun i _ => hu i)
+  -- Each term ≤ projectiveSeminorm (see docstring for proof sketch)
+  have hle : ∀ n, ∏ i : ι,
+      ‖(inclusionInDoubleDual 𝕜 (E i) (m i)) (u i n)‖ / ‖u i n‖ ≤
+      projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+    intro n
+    sorry
+  -- Pass to the limit
+  exact le_of_tendsto' hprod hle
 
 end ProjSeminorm
