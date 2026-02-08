@@ -85,14 +85,19 @@ theorem projectiveSeminorm_tprod_of_bidual_iso
       push_neg at h
       -- dual_def : inclusionInDoubleDual 𝕜 E x f = f x (rfl)
       simp only [NormedSpace.dual_def]
-      have hpos : 0 < ∏ i : ι, ‖u i n‖ :=
-        Finset.prod_pos fun i _ =>
-          norm_pos_iff.mpr (α := StrongDual 𝕜 (E i)) (h i)
+      have hpos : 0 < ∏ i : ι, ‖u i n‖ := by
+        apply Finset.prod_pos; intro i _
+        rcases eq_or_lt_of_le (ContinuousLinearMap.opNorm_nonneg (u i n)) with h0 | h0
+        · exfalso; apply h i; ext x
+          have := (u i n).le_opNorm x
+          simp only [← h0, zero_mul] at this
+          exact norm_le_zero_iff.mp this
+        · exact h0
       simp_rw [div_eq_mul_inv, Finset.prod_mul_distrib,
         Finset.prod_inv_distrib]
       rw [mul_inv_le_iff₀ hpos]
       calc ∏ i : ι, ‖(u i n) (m i)‖
-          = ‖∏ i : ι, (u i n) (m i)‖ := (norm_prod _).symm
+          = ‖∏ i : ι, (u i n) (m i)‖ := (norm_prod Finset.univ _).symm
         _ = ‖dualDistribL (⨂ₜ[𝕜] i, u i n) (⨂ₜ[𝕜] i, m i)‖ := by
             rw [dualDistribL_tprod_apply]
         _ ≤ ‖dualDistribL (⨂ₜ[𝕜] i, u i n)‖ *
@@ -101,7 +106,7 @@ theorem projectiveSeminorm_tprod_of_bidual_iso
         _ ≤ ‖dualDistribL (⨂ₜ[𝕜] i, u i n)‖ *
             projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
             gcongr
-            exact injectiveSeminorm_le_projectiveSeminorm _ _
+            exact injectiveSeminorm_le_projectiveSeminorm _
         _ ≤ (∏ i, ‖u i n‖) *
             projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
             gcongr

@@ -785,3 +785,28 @@ lean_local_search: "exists_norming_sequence"
    Or just `by positivity` or `by simp [h i]`.
 2. Once hle compiles, close ProjSeminorm-dtv.13.1, .13.2, .13.3, and .13
 3. Then proceed to Step 5 (RCLike corollary — should be ~5 LOC)
+
+### Session 10 (2026-02-08): Step 4 complete — WithBidual.lean sorry-free
+
+**What was done:**
+- Fixed 3 build errors in WithBidual.lean, making it sorry-free:
+  1. `norm_pos_iff` zero-instance diamond for `StrongDual`: solved with direct proof
+     via `ContinuousLinearMap.opNorm_nonneg` + `le_opNorm` + `norm_le_zero_iff`
+  2. `norm_prod` needed explicit `Finset.univ` argument
+  3. `injectiveSeminorm_le_projectiveSeminorm` takes 1 arg (pointwise), not 2
+- Build verified: 2315 jobs, 0 errors, 0 warnings
+- Closed ProjSeminorm-dtv.13, .13.1, .13.2, .13.3
+
+**Key learnings:**
+- `ContinuousLinearMap.opNorm_zero_iff` requires `NormedAddCommGroup` (not `Seminormed`).
+  For seminormed sources, prove `f = 0` manually: `ext x; le_opNorm` + `simp` + `norm_le_zero_iff`.
+- `norm_prod` signature: `(s : Finset β) (f : β → α)` — must supply both args.
+- `injectiveSeminorm_le_projectiveSeminorm` is `Seminorm`-level `≤`, unfolds pointwise with 1 arg.
+
+**Current state:**
+- Step 4 fully complete. 16 of 22 issues closed.
+- Next actionable: `ProjSeminorm-dtv.14` (Step 5: create RCLike.lean)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Create RCLike.lean with `projectiveSeminorm_tprod` (~5 LOC using `inclusionInDoubleDualLi`)
