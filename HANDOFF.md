@@ -598,3 +598,27 @@ lean_local_search: "exists_norming_sequence"
    - Prop 17.4: Multiplicativity of ultrametric projective norm
 3. **Current mathlib file**: `Mathlib/Analysis/Normed/Module/PiTensorProduct/ProjectiveSeminorm.lean`
 4. **The TBD item**: Lines 32-34 of the above file
+
+---
+
+## Session Log
+
+### Session 1 (2026-02-08): Project scaffolding & issue tracking
+
+**What was done:**
+- Initialized `bd` (beads) issue tracker for the project
+- Created epic `ProjSeminorm-dtv` with 22 sub-issues covering all 8 steps at high granularity
+- Full dependency chain established: Steps 1→2→3→4→5 (critical path), then 6 & 7 branch in parallel, Step 8 merges all
+- Installed `lean-lsp-mcp` (Lean 4 MCP server) for LSP integration in Claude Code — config in `.mcp.json`
+- Removed GitHub Actions CI workflows (lean_action_ci, update, create-release) to stop email spam
+
+**Current state:**
+- `ProjSeminorm/Basic.lean` exists but is still the `lake init` placeholder (`def hello := "world"`)
+- No implementation work started yet — all 22 issues are `open`
+- First actionable issue: `ProjSeminorm-dtv.1` (create Basic.lean with proper imports/variables)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Start with `ProjSeminorm-dtv.1`: replace Basic.lean placeholder with proper imports
+3. Build-verify (`ProjSeminorm-dtv.2`), then proceed through the dependency chain
+4. Restart Claude Code first to activate the lean-lsp MCP server
