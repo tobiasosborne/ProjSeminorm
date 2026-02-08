@@ -726,3 +726,20 @@ lean_local_search: "exists_norming_sequence"
 **Next session should:**
 1. `bd ready` to see available work
 2. Define `dualDistribL` — the continuous version of algebraic `dualDistrib`
+
+### Session 8 (2026-02-08): Step 3 complete — DualDistribL.lean sorry-free
+
+**What was done:**
+- Defined `dualDistribL` as a continuous linear map via `liftEquiv` + `compContinuousLinearMapLRight` + `mkPiAlgebra`
+- Proved `dualDistribL_tprod_apply` (evaluation on pure tensors = product of evaluations)
+- Proved `norm_dualDistribL_tprod_le` (norm bound ≤ product of norms, via `liftIsometry` + `norm_compContinuousLinearMap_le` + `norm_mkPiAlgebra`)
+- DualDistribL.lean is now completely sorry-free (0 errors, 0 warnings)
+- Closed `ProjSeminorm-dtv.9`, `ProjSeminorm-dtv.10`, `ProjSeminorm-dtv.11`
+
+**Current state:**
+- Step 3 fully complete. 11 of 22 issues closed.
+- Next actionable: `ProjSeminorm-dtv.12` (Step 4: create WithBidual.lean)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Start Step 4: prove `projectiveSeminorm_tprod_of_bidual_iso` using norming sequences + dualDistribL

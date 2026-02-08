@@ -28,19 +28,36 @@ theorem projectiveSeminorm_field_tprod (c : ι → 𝕜) :
     ContinuousMultilinearMap.norm_mkPiAlgebra, norm_prod] at h1
   linarith
 
-/-- `dualDistrib` as a continuous linear map. -/
+/-- `dualDistrib` as a continuous linear map, constructed via `liftEquiv` and `mkPiAlgebra`. -/
 noncomputable def dualDistribL :
     (⨂[𝕜] i, StrongDual 𝕜 (E i)) →L[𝕜]
-    StrongDual 𝕜 (⨂[𝕜] i, E i) := by
-  sorry
+    StrongDual 𝕜 (PiTensorProduct 𝕜 E) :=
+  liftEquiv 𝕜 (fun i => StrongDual 𝕜 (E i)) (StrongDual 𝕜 (PiTensorProduct 𝕜 E))
+    (((liftIsometry 𝕜 E 𝕜).toContinuousLinearEquiv :
+      ContinuousMultilinearMap 𝕜 E 𝕜 →L[𝕜] _).compContinuousMultilinearMap
+      (ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι 𝕜).compContinuousLinearMapLRight)
 
 theorem dualDistribL_tprod_apply
     (f : Π i, StrongDual 𝕜 (E i)) (m : Π i, E i) :
     dualDistribL (⨂ₜ[𝕜] i, f i) (⨂ₜ[𝕜] i, m i) = ∏ i, f i (m i) := by
-  sorry
+  simp [dualDistribL, liftEquiv, liftIsometry,
+    ContinuousMultilinearMap.compContinuousLinearMapLRight,
+    ContinuousMultilinearMap.compContinuousLinearMap,
+    ContinuousMultilinearMap.mkPiAlgebra_apply]
 
 theorem norm_dualDistribL_tprod_le (f : Π i, StrongDual 𝕜 (E i)) :
     ‖dualDistribL (⨂ₜ[𝕜] i, f i)‖ ≤ ∏ i, ‖f i‖ := by
-  sorry
+  have h1 : dualDistribL (⨂ₜ[𝕜] i, f i) =
+      (liftIsometry 𝕜 E 𝕜)
+        ((ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι 𝕜).compContinuousLinearMap f) := by
+    simp [dualDistribL, liftEquiv, liftIsometry,
+      ContinuousMultilinearMap.compContinuousLinearMapLRight,
+      ContinuousLinearMap.compContinuousMultilinearMap]
+  rw [h1, LinearIsometryEquiv.norm_map]
+  calc ‖(ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι 𝕜).compContinuousLinearMap f‖
+      ≤ ‖ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι 𝕜‖ * ∏ i, ‖f i‖ :=
+        ContinuousMultilinearMap.norm_compContinuousLinearMap_le _ _
+    _ = 1 * ∏ i, ‖f i‖ := by rw [ContinuousMultilinearMap.norm_mkPiAlgebra]
+    _ = ∏ i, ‖f i‖ := one_mul _
 
 end ProjSeminorm
