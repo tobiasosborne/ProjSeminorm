@@ -673,4 +673,20 @@ lean_local_search: "exists_norming_sequence"
 
 **Next session should:**
 1. `bd ready` to see available work
-2. Prove `exists_norming_sequence` using `isLUB_opNorm` + `IsLUB.exists_seq_monotone_tendsto`
+2. Start with `ProjSeminorm-dtv.7`: create DualDistribL.lean (Step 3)
+
+### Session 5 (2026-02-08): Step 2 complete — NormingSeq.lean sorry-free
+
+**What was done:**
+- Proved `exists_norming_sequence` fully (no sorry) in `NormingSeq.lean`
+- Proof: `IsLUB.exists_seq_monotone_tendsto` + `choose` to lift real-valued witnesses back to E
+- NormingSeq.lean is now completely sorry-free (0 errors, 0 warnings)
+- Closed `ProjSeminorm-dtv.5` and `ProjSeminorm-dtv.6`
+
+**Current state:**
+- Step 2 fully complete. 6 of 22 issues closed.
+- Next actionable: `ProjSeminorm-dtv.7` (create DualDistribL.lean — Step 3)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Start Step 3: create DualDistribL.lean with continuous dualDistrib
