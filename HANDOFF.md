@@ -710,3 +710,19 @@ lean_local_search: "exists_norming_sequence"
 **Next session should:**
 1. `bd ready` to see available work
 2. Prove `projectiveSeminorm_field_tprod` using `constantBaseRingEquiv`
+
+### Session 7 (2026-02-08): Prove projectiveSeminorm_field_tprod
+
+**What was done:**
+- Proved `projectiveSeminorm_field_tprod` (no sorry) in `DualDistribL.lean`
+- Proof: `le_antisymm` with upper bound from `projectiveSeminorm_tprod_le` and lower bound via `norm_eval_le_projectiveSeminorm` applied to `ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι 𝕜` (multiplication), then `simp` with `lift.tprod`, `mkPiAlgebra_apply`, `norm_mkPiAlgebra`, `norm_prod` + `linarith`
+- Build verified: clean (2312 jobs, 0 errors)
+- Closed `ProjSeminorm-dtv.8`
+
+**Current state:**
+- 8 of 22 issues closed. `projectiveSeminorm_field_tprod` fully proven.
+- Next actionable: `ProjSeminorm-dtv.9` (define `dualDistribL` as continuous linear map)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Define `dualDistribL` — the continuous version of algebraic `dualDistrib`

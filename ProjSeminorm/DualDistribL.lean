@@ -20,7 +20,13 @@ variable {E : ι → Type*} [∀ i, SeminormedAddCommGroup (E i)] [∀ i, Normed
 /-- The projective seminorm on `⨂[𝕜] i, 𝕜` equals `∏ i, ‖c i‖`. -/
 theorem projectiveSeminorm_field_tprod (c : ι → 𝕜) :
     projectiveSeminorm (⨂ₜ[𝕜] i, c i) = ∏ i, ‖c i‖ := by
-  sorry
+  apply le_antisymm (projectiveSeminorm_tprod_le c)
+  -- Lower bound: evaluate mkPiAlgebra (= multiplication) on the tensor
+  have h1 := norm_eval_le_projectiveSeminorm (⨂ₜ[𝕜] i, c i) 𝕜
+    (ContinuousMultilinearMap.mkPiAlgebra 𝕜 ι 𝕜)
+  simp [PiTensorProduct.lift.tprod, ContinuousMultilinearMap.mkPiAlgebra_apply,
+    ContinuousMultilinearMap.norm_mkPiAlgebra, norm_prod] at h1
+  linarith
 
 /-- `dualDistrib` as a continuous linear map. -/
 noncomputable def dualDistribL :
