@@ -619,6 +619,24 @@ lean_local_search: "exists_norming_sequence"
 
 **Next session should:**
 1. `bd ready` to see available work
-2. Start with `ProjSeminorm-dtv.1`: replace Basic.lean placeholder with proper imports
-3. Build-verify (`ProjSeminorm-dtv.2`), then proceed through the dependency chain
+2. Start with `ProjSeminorm-dtv.3`: create NormingSeq.lean
+3. Proceed through the dependency chain (Steps 2→3→4→5)
 4. Restart Claude Code first to activate the lean-lsp MCP server
+
+### Session 2 (2026-02-08): Step 1 complete
+
+**What was done:**
+- Replaced `Basic.lean` placeholder with proper imports and variable declarations
+- All 4 imports, namespace, universe variables (uι, u𝕜, uE), standard variable block
+- Build verified: clean (2312 jobs, 0 errors)
+- Closed `ProjSeminorm-dtv.1` and `ProjSeminorm-dtv.2`
+
+**Current state:**
+- Step 1 complete. 2 of 22 issues closed.
+- Next actionable: `ProjSeminorm-dtv.3` (create NormingSeq.lean with imports/variables)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Start with `ProjSeminorm-dtv.3`: create NormingSeq.lean
+3. Then `ProjSeminorm-dtv.4`: prove `isLUB_opNorm`
+4. Then `ProjSeminorm-dtv.5`: prove `exists_norming_sequence`
