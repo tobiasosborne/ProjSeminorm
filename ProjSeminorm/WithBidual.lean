@@ -74,7 +74,40 @@ theorem projectiveSeminorm_tprod_of_bidual_iso
       ‖(inclusionInDoubleDual 𝕜 (E i) (m i)) (u i n)‖ / ‖u i n‖ ≤
       projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
     intro n
-    sorry
+    by_cases h : ∃ i, u i n = 0
+    · -- Zero case: factor is 0/0 = 0, product is 0
+      obtain ⟨i₀, hi₀⟩ := h
+      have : (fun i => ‖((inclusionInDoubleDual 𝕜 (E i)) (m i))
+          (u i n)‖ / ‖u i n‖) i₀ = 0 := by simp [hi₀]
+      rw [Finset.prod_eq_zero (Finset.mem_univ i₀) this]
+      exact apply_nonneg _ _
+    · -- Nonzero case: duality argument
+      push_neg at h
+      -- dual_def : inclusionInDoubleDual 𝕜 E x f = f x (rfl)
+      simp only [NormedSpace.dual_def]
+      have hpos : 0 < ∏ i : ι, ‖u i n‖ :=
+        Finset.prod_pos fun i _ =>
+          norm_pos_iff.mpr (α := StrongDual 𝕜 (E i)) (h i)
+      simp_rw [div_eq_mul_inv, Finset.prod_mul_distrib,
+        Finset.prod_inv_distrib]
+      rw [mul_inv_le_iff₀ hpos]
+      calc ∏ i : ι, ‖(u i n) (m i)‖
+          = ‖∏ i : ι, (u i n) (m i)‖ := (norm_prod _).symm
+        _ = ‖dualDistribL (⨂ₜ[𝕜] i, u i n) (⨂ₜ[𝕜] i, m i)‖ := by
+            rw [dualDistribL_tprod_apply]
+        _ ≤ ‖dualDistribL (⨂ₜ[𝕜] i, u i n)‖ *
+            ‖(⨂ₜ[𝕜] i, m i)‖ :=
+            (dualDistribL (⨂ₜ[𝕜] i, u i n)).le_opNorm _
+        _ ≤ ‖dualDistribL (⨂ₜ[𝕜] i, u i n)‖ *
+            projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+            gcongr
+            exact injectiveSeminorm_le_projectiveSeminorm _ _
+        _ ≤ (∏ i, ‖u i n‖) *
+            projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+            gcongr
+            exact norm_dualDistribL_tprod_le _
+        _ = projectiveSeminorm (⨂ₜ[𝕜] i, m i) *
+            ∏ i, ‖u i n‖ := mul_comm _ _
   -- Pass to the limit
   exact le_of_tendsto' hprod hle
 

@@ -768,12 +768,20 @@ lean_local_search: "exists_norming_sequence"
 - The calc chain itself works: `norm_prod` → `dualDistribL_tprod_apply` →
   `le_opNorm` → `injectiveSeminorm_le_projectiveSeminorm` →
   `norm_dualDistribL_tprod_le` → `mul_comm`.
-- `inclusionInDoubleDual_apply` simplifies `incl(m)(f)` to `f(m)`.
+- `inclusionInDoubleDual_apply` does NOT exist. Use `NormedSpace.dual_def` instead
+  (`inclusionInDoubleDual 𝕜 E x f = f x`, proven by `rfl`).
 - `gcongr` handles the monotonicity steps in the calc chain.
 
 **Current state:**
-- 12 of 22 issues closed. `ProjSeminorm-dtv.13` in progress (sorry in `hle`).
+- 12 of 22 issues closed. `ProjSeminorm-dtv.13` in progress.
+- **BUILD HAS ERRORS** — WithBidual.lean has partial hle proof that doesn't compile.
 
 **Next session should:**
-1. Fill the `hle` sorry using the documented approach (zero case + nonzero calc)
-2. Then proceed to Step 5 (RCLike corollary — should be ~5 LOC)
+1. Fix the `norm_pos_iff` type mismatch for StrongDual. The zero instance on
+   `StrongDual 𝕜 (E i)` is `ContinuousLinearMap.zero`, but `norm_pos_iff`
+   expects `SubtractionMonoid...zero`. Do NOT use `norm_pos_iff.mpr (h i)`.
+   Instead try: `norm_ne_zero_iff.mpr (h i) |>.bot_lt` or
+   `lt_of_le_of_ne (norm_nonneg _) (Ne.symm (norm_ne_zero_iff.mpr (h i)))`.
+   Or just `by positivity` or `by simp [h i]`.
+2. Once hle compiles, close ProjSeminorm-dtv.13.1, .13.2, .13.3, and .13
+3. Then proceed to Step 5 (RCLike corollary — should be ~5 LOC)
