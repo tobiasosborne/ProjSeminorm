@@ -9,6 +9,7 @@ using the projective-to-injective seminorm comparison. This is Step 3 of the
 projective seminorm multiplicativity proof.
 -/
 
+open scoped TensorProduct BigOperators
 open PiTensorProduct
 
 namespace ProjSeminorm
