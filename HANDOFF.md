@@ -637,6 +637,23 @@ lean_local_search: "exists_norming_sequence"
 
 **Next session should:**
 1. `bd ready` to see available work
-2. Start with `ProjSeminorm-dtv.3`: create NormingSeq.lean
-3. Then `ProjSeminorm-dtv.4`: prove `isLUB_opNorm`
-4. Then `ProjSeminorm-dtv.5`: prove `exists_norming_sequence`
+2. Start with `ProjSeminorm-dtv.4`: prove `isLUB_opNorm`
+3. Then `ProjSeminorm-dtv.5`: prove `exists_norming_sequence`
+
+### Session 3 (2026-02-08): Step 2 scaffold — NormingSeq.lean
+
+**What was done:**
+- Created `ProjSeminorm/NormingSeq.lean` with imports, variables, and sorry'd stubs
+- Two theorems scaffolded: `isLUB_opNorm` and `exists_norming_sequence`
+- Imports: `InjectiveSeminorm` (transitive CLM norm API) + `Topology.Order.IsLUB`
+- Build verified: clean (2312 jobs, 0 errors, 2 sorry warnings only)
+- Closed `ProjSeminorm-dtv.3`
+
+**Current state:**
+- Steps 1-2 scaffolded. 3 of 22 issues closed.
+- Next actionable: `ProjSeminorm-dtv.4` (prove `isLUB_opNorm`)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Start with `ProjSeminorm-dtv.4`: prove `isLUB_opNorm`
+3. Then `ProjSeminorm-dtv.5`: prove `exists_norming_sequence`
