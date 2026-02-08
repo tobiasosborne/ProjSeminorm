@@ -21,7 +21,19 @@ variable {𝕜 E F : Type*} [NontriviallyNormedField 𝕜]
 /-- The operator norm is the LUB of `‖f x‖ / ‖x‖`. -/
 theorem isLUB_opNorm (f : E →L[𝕜] F) :
     IsLUB (Set.range fun x => ‖f x‖ / ‖x‖) ‖f‖ := by
-  sorry
+  constructor
+  · rintro _ ⟨x, rfl⟩
+    exact div_le_of_le_mul₀ (norm_nonneg _) (norm_nonneg _) (f.le_opNorm x)
+  · intro M hM
+    apply f.opNorm_le_bound
+    · exact le_trans (div_nonneg (norm_nonneg _) (norm_nonneg _)) (hM ⟨0, rfl⟩)
+    · intro x
+      have hMx := hM ⟨x, rfl⟩
+      by_cases hx : ‖x‖ = 0
+      · rw [hx, mul_zero]
+        calc ‖f x‖ ≤ ‖f‖ * ‖x‖ := f.le_opNorm x
+          _ = 0 := by rw [hx, mul_zero]
+      · rwa [div_le_iff₀ (lt_of_le_of_ne (norm_nonneg x) (Ne.symm hx))] at hMx
 
 /-- There exists a sequence of elements whose norm ratios converge to the operator norm. -/
 theorem exists_norming_sequence (f : E →L[𝕜] F) :
