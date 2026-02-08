@@ -655,5 +655,22 @@ lean_local_search: "exists_norming_sequence"
 
 **Next session should:**
 1. `bd ready` to see available work
-2. Start with `ProjSeminorm-dtv.4`: prove `isLUB_opNorm`
-3. Then `ProjSeminorm-dtv.5`: prove `exists_norming_sequence`
+2. Start with `ProjSeminorm-dtv.5`: prove `exists_norming_sequence`
+
+### Session 4 (2026-02-08): Prove isLUB_opNorm
+
+**What was done:**
+- Proved `isLUB_opNorm` fully (no sorry) in `NormingSeq.lean`
+- Proof structure:
+  - Upper bound: `div_le_of_le_mul₀` + `le_opNorm`
+  - Least bound: `opNorm_le_bound` + case split on `‖x‖ = 0` (calc chain) vs `‖x‖ ≠ 0` (`div_le_iff₀`)
+- Build verified: clean (0 errors, 1 sorry warning for `exists_norming_sequence`)
+- Closed `ProjSeminorm-dtv.4`
+
+**Current state:**
+- 4 of 22 issues closed. `isLUB_opNorm` fully proven.
+- Next actionable: `ProjSeminorm-dtv.5` (prove `exists_norming_sequence`)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Prove `exists_norming_sequence` using `isLUB_opNorm` + `IsLUB.exists_seq_monotone_tendsto`
