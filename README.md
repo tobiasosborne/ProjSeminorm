@@ -25,7 +25,7 @@ representation). The lower bound is the hard part.
 ### Origin
 
 Mathlib4 PR [#33969](https://github.com/leanprover-community/mathlib4/pull/33969)
-(by David Gross and Davood Khoshnevisan) proves multiplicativity under an
+(by David Gross and Davood Haji Taghi Tehrani) proves multiplicativity under an
 additional hypothesis:
 
 ```lean

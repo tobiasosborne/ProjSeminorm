@@ -18,7 +18,7 @@ theorem projectiveSeminorm_tprod_of_bidual_iso
 In words: is the projective tensor seminorm always multiplicative on pure tensors,
 or does it require that each factor embeds isometrically into its bidual?
 
-**Stakes**: If proved unconditionally, David & Davood will clean it up and PR to mathlib.
+**Stakes**: If proved unconditionally, David & Davood Haji Taghi Tehrani will clean it up and PR to mathlib.
 If a counterexample is found, that's equally valuable.
 
 ---
