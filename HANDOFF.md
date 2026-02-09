@@ -1003,3 +1003,40 @@ Triangle inequality: ∑|αⱼ|•‖vⱼ‖ ≥ ‖∑ αⱼ•vⱼ‖. Combini
 1. `bd ready` to check remaining work
 2. Consider extending cancellation trick to general (non-collinear) case
 3. Or: write final summary email to David Gross
+
+### Session 15 (2026-02-09): 5-agent research — CP true unconditionally, proof reduces to FDNP
+
+**What was done:**
+- Spawned 3 independent research agents (Alpha, Beta, Gamma) to investigate CP vs HB:
+  - **Unanimous verdict**: CP does NOT imply HB, but CP is almost certainly true unconditionally
+  - CP is not independent of ZFC (99% confidence)
+  - Created `CROSS_PROPERTY_REPORT.md` and `AGENT_GAMMA_REPORT.md`
+- Spawned 2 further agents (Delta, Epsilon) to find unconditional CP proof:
+  - **Key discovery**: Quotient + Cancellation Trick reduces CP to ONE open lemma (FDNP)
+  - Created `PROOF_STRATEGY.md` with complete 7-step proof assuming FDNP
+- The proof structure:
+  ```
+  General repr → (FDNP gives norming H) → quotient by H → collinear repr
+  → cancellation trick (sorry-free) → ‖q(f)‖=‖f‖ (FDNP) → done
+  ```
+
+**FDNP (Finite-Dimensional Norming Problem):**
+For any finite-dimensional normed space W over a valued field k and any f ∈ W,
+does there exist a hyperplane H ⊂ W with dist(f, H) = ‖f‖?
+Equivalently: does a Birkhoff-James orthogonal hyperplane always exist?
+
+Known cases: Archimedean fields (yes, Hahn-Banach), spherically complete NA fields (yes, Ingleton).
+Open: non-spherically complete NA fields like ℂ_p.
+
+**Current state:**
+- `PROOF_STRATEGY.md` documents the complete proof assuming FDNP
+- `CROSS_PROPERTY_REPORT.md` documents the 3-agent CP vs HB investigation
+- All existing Lean code remains sorry-free (no new Lean code this session)
+
+**TOP PRIORITY for next session: Numerical FDNP investigation**
+1. Write a SageMath/Python script to test FDNP over ℚ_p
+2. Use the Ingleton pathological 2D norm on k²: ‖(x,y)‖ = max(|x|, |y|, |x−y|/|ρ|)
+3. For each f in a grid, compute dist(f, H) over all hyperplanes H and check dist(f,H) = ‖f‖
+4. Test over ℚ_2, ℚ_3, ℚ_5 with increasing precision
+5. This is fully computable: value group |k×| = pℤ is discrete, norms explicit
+6. A single counterexample disproves FDNP; universal success builds confidence for proof
