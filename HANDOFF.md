@@ -810,3 +810,25 @@ lean_local_search: "exists_norming_sequence"
 **Next session should:**
 1. `bd ready` to see available work
 2. Create RCLike.lean with `projectiveSeminorm_tprod` (~5 LOC using `inclusionInDoubleDualLi`)
+
+### Session 12 (2026-02-09): Step 6 complete — DirectApproach.lean
+
+**What was done:**
+- Created `ProjSeminorm/DirectApproach.lean` documenting the direct algebraic approach
+- Module docstring covers the full 5-step approach, the wrong-direction triangle inequality
+  obstruction, special cases (ultrametric vs archimedean), and conclusion
+- Two formalized lemmas (no sorry):
+  - `reduced_representation_cost_ge`: the step that DOES work (reduced independent repr)
+  - `triangle_wrong_direction`: the step that FAILS (triangle inequality ≤ not ≥)
+- Build verified: 2317 jobs, 0 errors, 0 warnings, 0 sorries
+- Closed `ProjSeminorm-dtv.17` and `ProjSeminorm-dtv.18`
+
+**Current state:**
+- Steps 1-6 complete. 17 of 22 issues closed.
+- Next actionable: `ProjSeminorm-dtv.19` (Step 7: Counterexample.lean) and
+  `ProjSeminorm-dtv.20` (computational counterexample search)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Create Counterexample.lean (Step 7) — investigation of counterexamples for general fields
+3. Then Step 8: summary report + final build verification
