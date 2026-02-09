@@ -832,3 +832,21 @@ lean_local_search: "exists_norming_sequence"
 1. `bd ready` to see available work
 2. Create Counterexample.lean (Step 7) — investigation of counterexamples for general fields
 3. Then Step 8: summary report + final build verification
+
+### Session 12 continued (2026-02-09): Step 7 complete — Counterexample.lean
+
+**What was done:**
+- Literature search found: no counterexample exists in the literature, question is genuinely open
+- Key insight: over spherically complete fields (including ℚ_p), Ingleton's theorem (1952)
+  gives Hahn-Banach, so h_bidual is automatic. Only ℂ_p-type fields remain open.
+- Created `ProjSeminorm/Counterexample.lean` documenting all findings
+- Closed `ProjSeminorm-dtv.19` and `ProjSeminorm-dtv.20`
+
+**Current state:**
+- Steps 1-7 complete. 19 of 22 issues closed.
+- Next actionable: Step 8 — summary report (`ProjSeminorm-dtv.21`) and
+  final build verification (`ProjSeminorm-dtv.22`)
+
+**Next session should:**
+1. `bd ready` to see available work
+2. Write summary report (Step 8) and do final build verification
