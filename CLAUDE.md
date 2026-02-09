@@ -12,7 +12,7 @@ lake build ProjSeminorm 2>&1 | tail -40
 
 - `ProjSeminorm/` -- Lean 4 source files
 - `HANDOFF.md` -- Full mathematical analysis + 8-step implementation plan
-- `dgemail.txt` -- Original problem statement from David Gao
+- `dgemail.txt` -- Original problem statement from David Gross
 
 ## The Problem
 

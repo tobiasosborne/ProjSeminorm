@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Tobias Osborne. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Tobias Osborne
+-/
 import Mathlib.Analysis.Normed.Module.PiTensorProduct.InjectiveSeminorm
 import Mathlib.Topology.Order.IsLUB
 

@@ -2,7 +2,7 @@
 
 ## The Problem
 
-**Source**: Email from David Gao (see `dgemail.txt` in this directory)
+**Source**: Email from David Gross (see `dgemail.txt` in this directory)
 
 **PR**: https://github.com/leanprover-community/mathlib4/pull/33969
 
@@ -908,7 +908,7 @@ No counterexample exists in the literature (Step 7). A counterexample would requ
 infinite-dimensional space over a non-spherically-complete non-archimedean field — a very
 exotic setting.
 
-### Recommendation to David Gao
+### Recommendation to David Gross
 
 1. **For mathlib PR #33969**: Keep `h_bidual`. It is the correct generality level. The
    `RCLike` corollary gives the "clean" unconditional statement for the most common use case.

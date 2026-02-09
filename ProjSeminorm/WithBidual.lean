@@ -1,43 +1,30 @@
+/-
+Copyright (c) 2026 Tobias Osborne. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Tobias Osborne
+-/
 import ProjSeminorm.DualDistribL
 
 /-!
 # Projective Seminorm Multiplicativity with Bidual Hypothesis
 
 The main theorem: the projective seminorm is multiplicative on pure tensors,
-assuming each factor embeds isometrically into its bidual. This is Step 4
-of the proof plan.
+assuming each factor embeds isometrically into its bidual.
 
-## Proof structure (compiles, sorry in `hle`)
+## Main statements
 
-The outer framework works:
-1. Norming sequences from `exists_norming_sequence` (Step 2)
-2. Product convergence via `tendsto_finset_prod`
-3. Limit passage via `le_of_tendsto'`
+- `projectiveSeminorm_tprod_of_bidual_iso`: `π(⨂ₜ m_i) = ∏ ‖m_i‖` given `h_bidual`.
 
-The sorry is in `hle`: showing each product term ≤ projectiveSeminorm.
+## Proof structure
 
-## Learnings for filling the sorry
-
-The `hle` proof splits into two cases:
-
-**Zero case** (`∃ i, u i n = 0`): Product has a zero factor, so it's 0.
-- `Finset.prod_eq_zero` works for the product = 0 step
-- Need `projectiveSeminorm.nonneg'` or `apply_nonneg` (NOT `map_nonneg`,
-  which needs `OrderHomClass`; NOT `Seminorm.nonneg`, which doesn't exist)
-
-**Nonzero case** (`∀ i, u i n ≠ 0`): The duality calc chain.
-- `norm_pos_iff` for `StrongDual` needs explicit type annotation — the norm
-  instance is `ContinuousLinearMap.hasOpNorm`, not `NormedAddGroup.toNorm`.
-  Fix: use `(norm_pos_iff (α := StrongDual 𝕜 (E i))).mpr` or
-  `ContinuousLinearMap.norm_pos_iff.mpr`.
-- `Finset.prod_div_distrib` requires `CommGroup` — `ℝ` is NOT a `CommGroup`.
-  Instead use: `simp_rw [div_eq_mul_inv, Finset.prod_mul_distrib,
-  Finset.prod_inv_distrib]` then `mul_inv_le_iff₀`.
-- The calc chain `∏ ‖g(m)‖ ≤ (∏ ‖g‖) * projSem` via:
-  `norm_prod` → `dualDistribL_tprod_apply` → `le_opNorm` →
-  `injectiveSeminorm_le_projectiveSeminorm` → `norm_dualDistribL_tprod_le`
-- `inclusionInDoubleDual_apply` exists and simplifies `incl(m)(f) = f(m)`.
-- `gcongr` works for the monotonicity steps.
+1. For each index `i`, construct a norming sequence for `inclusionInDoubleDual(m_i)`
+   via `exists_norming_sequence`.
+2. The product of the norming ratios converges to `∏ ‖m_i‖` (using `h_bidual` to
+   rewrite the limit target).
+3. Each product term is bounded above by `projectiveSeminorm(⨂ₜ m_i)` via the
+   duality argument: evaluate `dualDistribL(⨂ₜ g_i)` on the tensor, then bound
+   using `le_opNorm` and `injectiveSeminorm_le_projectiveSeminorm`.
+4. Pass to the limit via `le_of_tendsto'`.
 -/
 
 open scoped TensorProduct BigOperators
