@@ -29,8 +29,10 @@ This is formalized in `ProjSeminorm/RCLike.lean` as `projectiveSeminorm_tprod`.
 
 ### 2. Spherically complete non-archimedean fields (e.g., ℚ_p)
 
-**Ingleton's theorem (1952)**: The Hahn-Banach extension theorem holds for normed spaces
-over a non-archimedean valued field `K` if and only if `K` is spherically complete.
+**Ingleton's theorem (1952)**: If `K` is a spherically complete non-archimedean valued
+field, then the Hahn-Banach extension theorem holds for all normed spaces over `K`.
+The converse (spherical completeness is also *necessary*) was established by later
+authors (see Perez-Garcia & Schikhof, 2010).
 
 Since `ℚ_p` is spherically complete (it is a local field), the Hahn-Banach theorem holds,
 the bidual embedding is isometric, and `h_bidual` is automatic. The cross property holds.
@@ -111,7 +113,7 @@ The `h_bidual` hypothesis is the natural abstraction level:
 ## References
 
 1. Ryan, *Introduction to Tensor Products of Banach Spaces* (Springer, 2002)
-2. Defant & Floret, *Tensor Norms and Operator Ideals* (Elsevier, 1993)
+2. Defant & Floret, *Tensor Norms and Operator Ideals* (North-Holland/Elsevier, 1992)
 3. Schneider, *Nonarchimedean Functional Analysis* (Springer, 2002), Prop 17.4
 4. Ingleton, "The Hahn-Banach theorem for non-Archimedean-valued fields" (1952)
 5. Perez-Garcia & Schikhof, *Locally Convex Spaces over Non-Archimedean Valued Fields*
