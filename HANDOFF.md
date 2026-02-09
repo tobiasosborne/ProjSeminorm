@@ -965,3 +965,41 @@ Triangle inequality: ∑|αⱼ|•‖vⱼ‖ ≥ ‖∑ αⱼ•vⱼ‖. Combini
 1. `bd ready` to find first actionable issue
 2. Create CancellationTrick.lean and work through the 5 steps
 3. Key difficulty: Step 2 (algebraic functional) and Step 3 (rank-1 factorization)
+
+### Session 14 (2026-02-09): Cancellation trick fully formalized — sorry-free
+
+**What was done:**
+- Created `ProjSeminorm/CancellationTrick.lean` (8 files total, ~145 LOC)
+- All 5 sub-issues of epic `ProjSeminorm-x4a` completed and closed
+- **Every theorem proved sorry-free**:
+  - `tmul_eq_zero_of_field`: Over a field, `a ⊗ₜ b = 0 → a = 0 ∨ b = 0`.
+    Proof: `Module.Free.of_divisionRing` → `Module.Flat` → `lTensor` preserves
+    injectivity of `toSpanSingleton` → `TensorProduct.rid` extracts `a = 0`.
+  - `left_eq_zero_of_tmul_eq_zero`: Corollary of above.
+  - `exists_dual_eq_one`: For `v ≠ 0`, ∃ `g : V →ₗ 𝕜, g v = 1`.
+    Proof: `Module.Free.chooseBasis` → find nonzero coordinate → rescale `Basis.coord`.
+  - `tmul_norm_product_eq`: `v ⊗ₜ w = u ⊗ₜ w₁ → ‖v‖*‖w‖ = ‖u‖*‖w₁‖`.
+    Proof: Apply `(g ⊗ id)` via `TensorProduct.map` + `TensorProduct.lid` to extract
+    `w = c•w₁`, then `(u - c•v) ⊗ₜ w₁ = 0` gives `u = c•v`, then `norm_smul + ring`.
+  - `collinear_cost_ge` (main theorem): Collinear representation cost ≥ `‖v‖*‖w‖`.
+    Proof: `smul_tmul` + `sum_tmul` (bilinearity collapse) → `norm_sum_le` (triangle)
+    → `tmul_norm_product_eq` (norm invariance).
+- Build: 2334 jobs, 0 errors, 0 warnings, 0 sorries
+- Closed: ProjSeminorm-mto, -hoj, -daw, -iq7, -e3s, -x4a (6 issues)
+
+**Key insights:**
+- `Module.Flat.lTensor_preserves_injective_linearMap` is the clean way to prove
+  `a ⊗ₜ b = 0 → a = 0 ∨ b = 0` over a field.
+- `TensorProduct.map g id` + `TensorProduct.lid` extracts scalar relationships
+  from tensor equalities without needing `VanishesTrivially` or basis machinery.
+- `TensorProduct.smul_tmul` direction: `(r • m) ⊗ₜ n = m ⊗ₜ (r • n)`.
+- `TensorProduct.sum_tmul` requires `Finset` argument (not `Fintype`).
+
+**Current state:**
+- All original 8 steps + cancellation trick complete. 25 of 28 issues closed.
+- Project has 8 Lean files, ~670 LOC, **all sorry-free**.
+
+**Next session should:**
+1. `bd ready` to check remaining work
+2. Consider extending cancellation trick to general (non-collinear) case
+3. Or: write final summary email to David Gross
