@@ -922,3 +922,46 @@ exotic setting.
 
 4. **The open question** (over ℂ_p-type fields) is genuinely interesting but likely requires
    new techniques or a counterexample construction that doesn't currently exist in the literature.
+
+### Session 13 (2026-02-09): Research proposals + Cancellation Trick formalization plan
+
+**What was done:**
+- Read David Gross's review (`review.txt`): previous work didn't attempt mathematical creativity
+- Launched 3 parallel Opus 4.6 research agents:
+  - **Counterexample Hunter**: No counterexample found. Tightest characterization: requires
+    ∞-dim space over non-spherically-complete field where finite-dim Hahn-Banach fails
+    for subspace norms. All naive attempts to cheapen pure tensors increase cost.
+  - **Proof Strategist**: Discovered **cancellation trick** — proves cross property for
+    all collinear representations (span dim s=1) WITHOUT Hahn-Banach. The tensor constraint
+    forces residual cancellation, making the triangle inequality go in the correct direction.
+    General case (s≥2) remains stuck: quotient norm degradation blocks closure.
+  - **Creative/Deep Knowledge**: C*-algebra self-tensor argument (π(v⊗v) = ‖v‖² via
+    multiplication map). Model theory, condensed math, tropical geometry all explored
+    and rejected with reasons. 85% confidence conjecture is TRUE.
+- All findings documented in `RESEARCH_PROPOSALS.md`
+- Created formalization plan for the cancellation trick: 5 steps, ~115 LOC total
+- Registered as beads issues: epic `ProjSeminorm-x4a` with 5 sub-issues in dependency chain:
+  1. `ProjSeminorm-mto`: Create CancellationTrick.lean setup (15 LOC)
+  2. `ProjSeminorm-hoj`: Prove exists_algebraic_dual_eq_one (25 LOC)
+  3. `ProjSeminorm-daw`: Prove tmul_eq_tmul_factorization (30 LOC)
+  4. `ProjSeminorm-iq7`: Prove tmul_norm_invariant (20 LOC)
+  5. `ProjSeminorm-e3s`: Prove collinear_cost_ge — main theorem (25 LOC)
+
+**Key mathematical insight (the cancellation trick):**
+For v ⊗ w = ∑ vⱼ ⊗ (αⱼ•w₁), bilinearity gives (∑ αⱼ•vⱼ) ⊗ w₁ = v ⊗ w.
+The rank-1 tensor norm invariance gives ‖∑ αⱼ•vⱼ‖•‖w₁‖ = ‖v‖•‖w‖.
+Triangle inequality: ∑|αⱼ|•‖vⱼ‖ ≥ ‖∑ αⱼ•vⱼ‖. Combining: Cost ≥ ‖v‖•‖w‖. QED.
+
+**Key mathlib API identified:**
+- `LinearEquiv.toSpanNonzeroSingleton` for algebraic functional construction
+- `TensorProduct.map` + `TensorProduct.rid` for rank-1 factorization
+- `norm_smul`, `NormedField.norm_inv` for norm invariance
+
+**Current state:**
+- No new Lean code written. All work is research + planning.
+- Next session: implement Steps 1-5 of cancellation trick formalization.
+
+**Next session should:**
+1. `bd ready` to find first actionable issue
+2. Create CancellationTrick.lean and work through the 5 steps
+3. Key difficulty: Step 2 (algebraic functional) and Step 3 (rank-1 factorization)
