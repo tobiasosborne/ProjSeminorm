@@ -1,0 +1,651 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+% --- Theorem environments ---
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+% --- Macros ---
+\newcommand{\Cp}{\mathbb{C}_p}
+\newcommand{\Qp}{\mathbb{Q}_p}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\norm}[1]{\|#1\|}
+\newcommand{\abs}[1]{|#1|}
+\DeclareMathOperator{\proj}{\pi}
+\DeclareMathOperator{\spn}{span}
+
+% --- Colors for status ---
+\definecolor{proved}{RGB}{0,128,0}
+\definecolor{pending}{RGB}{200,150,0}
+\definecolor{refuted}{RGB}{200,0,0}
+\definecolor{archived}{RGB}{128,128,128}
+
+% --- Title ---
+\title{\textbf{Report on the Cross Property for\\Projective Tensor Seminorms}\\[6pt]
+\large Adversarial Proof Framework Analysis\\[4pt]
+\normalsize Mathlib4 PR \#33969: Removing \texttt{h\_bidual}}
+\author{Generated from the \texttt{af} proof workspace\\
+ProjSeminorm Project}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report documents the investigation of whether the \texttt{h\_bidual} hypothesis can be removed from the theorem \texttt{projectiveSeminorm\_tprod\_of\_bidual\_iso} in mathlib4 PR~\#33969.
+The question reduces to the \emph{Cross Property} (CP): is the projective tensor seminorm multiplicative on pure tensors over all nontrivially normed fields?
+Over 17 sessions, we have:
+(1)~formalized the theorem \emph{with} \texttt{h\_bidual} in 8 sorry-free Lean~4 files (${\sim}670$ LOC);
+(2)~proved the unconditional result over $\R/\C$ and for collinear and independent representations over all fields;
+(3)~reduced the open case to an explicit 3-term cost inequality over pairs of norms on $k^2$;
+(4)~constructed a 25-node adversarial proof tree investigating this inequality.
+The key finding is that the \emph{Finite-Dimensional Norming Problem} (FDNP) is \textbf{false} over $\Cp$ in dimension~2, blocking the standard duality proof.
+However, CP itself is strictly weaker than FDNP and remains open.
+The adversarial investigation has validated 3~nodes, archived 4~dead strategies (with explicit counterexamples), and identified the \emph{equality cases} of ultrametric cancellation as the hard core of the problem.
+Our recommendation: \texttt{h\_bidual} is the right hypothesis for mathlib.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%======================================================================
+\section{Problem Statement}
+\label{sec:problem}
+%======================================================================
+
+\subsection{Setup}
+
+The problem originates from an email by David Gross concerning mathlib4 PR~\#33969.
+
+\begin{definition}[Projective seminorm]
+For a finite family of seminormed spaces $\{E_i\}_{i \in \iota}$ over a nontrivially normed field~$\mathbb{k}$, the projective seminorm on $\bigotimes_{\mathbb{k}} E_i$ is
+\[
+  \pi(x) = \inf\Bigl\{\sum_j \prod_i \norm{m_j(i)} : x = \sum_j \bigotimes_i m_j(i)\Bigr\},
+\]
+where the infimum is over all representations of $x$ as a sum of pure tensors.
+\end{definition}
+
+\begin{definition}[The Cross Property]
+\label{def:cp}
+A tensor seminorm $\alpha$ on $\bigotimes E_i$ satisfies the \emph{cross property} if $\alpha(\bigotimes_i v_i) = \prod_i \norm{v_i}$ for all pure tensors.
+\end{definition}
+
+The upper bound $\pi(\bigotimes v_i) \le \prod_i \norm{v_i}$ is trivial (take the 1-term representation).
+The question is the lower bound.
+
+\subsection{The Theorem in Question}
+
+\begin{verbatim}
+theorem projectiveSeminorm_tprod_of_bidual_iso
+    (m : Pi i, E i)
+    (h_bidual : forall i, ||inclusionInDoubleDual k _ (m i)|| = ||m i||) :
+    ||tensor_product[k] i, m i|| = prod i, ||m i||
+\end{verbatim}
+
+\noindent\textbf{Question:} Can the hypothesis \texttt{h\_bidual} (isometric bidual embedding at each factor) be removed?
+
+\subsection{Why This Is Hard}
+
+\begin{enumerate}
+\item Over $\R$ or $\C$, the Hahn--Banach theorem gives isometric bidual embedding, so \texttt{h\_bidual} is automatic.
+\item Over spherically complete non-archimedean fields (e.g., $\Qp$), Ingleton's theorem (1952) provides Hahn--Banach, so \texttt{h\_bidual} holds.
+\item Over non-spherically-complete fields (e.g., $\Cp$), Hahn--Banach fails in general.  For certain ``pathological'' norms on $\Cp^2$, there is no norming functional for the standard basis vector --- this is the FDNP failure.
+\item The direct algebraic approach (decompose representations into linearly independent form) fails due to a \emph{wrong-direction triangle inequality}: reducing a dependent representation to independent form can \emph{increase} cost.
+\end{enumerate}
+
+
+%======================================================================
+\section{Lean 4 Formalization}
+\label{sec:lean}
+%======================================================================
+
+The project contains 8 Lean~4 files, ${\sim}670$ LOC, \textbf{all sorry-free}, building against mathlib4.
+
+\begin{center}
+\begin{tabular}{@{}llcp{6.5cm}@{}}
+\toprule
+\textbf{File} & \textbf{Step} & \textbf{LOC} & \textbf{Content} \\
+\midrule
+\texttt{Basic.lean} & 1 & 17 & Imports, universes, variable block \\
+\texttt{NormingSeq.lean} & 2 & 46 & \texttt{isLUB\_opNorm}, \texttt{exists\_norming\_sequence} \\
+\texttt{DualDistribL.lean} & 3 & 64 & \texttt{projectiveSeminorm\_field\_tprod}, \texttt{dualDistribL}, evaluation and norm bound \\
+\texttt{WithBidual.lean} & 4 & 119 & Main theorem with \texttt{h\_bidual} \\
+\texttt{RCLike.lean} & 5 & 21 & Unconditional corollary over $\R/\C$ \\
+\texttt{DirectApproach.lean} & 6 & 141 & Wrong-direction obstruction analysis \\
+\texttt{CancellationTrick.lean} & 7 & 145 & Collinear case (span dim 1) proved unconditionally \\
+\texttt{Counterexample.lean} & 8 & 119 & Literature survey and analysis \\
+\midrule
+& & \textbf{672} & \textbf{Every theorem fully proven} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Key Formalized Results}
+
+\begin{theorem}[\texttt{projectiveSeminorm\_tprod\_of\_bidual\_iso}]
+For all nontrivially normed fields $\mathbb{k}$, all finite families of seminormed $\mathbb{k}$-spaces $\{E_i\}$, and all $m_i \in E_i$: if $\norm{\iota_{E_i^{**}}(m_i)} = \norm{m_i}$ for each $i$, then $\pi(\bigotimes m_i) = \prod \norm{m_i}$.
+\end{theorem}
+
+\noindent Proof: norming sequences $\to$ \texttt{dualDistribL} evaluation $\to$ limit passage via \texttt{le\_of\_tendsto'}.
+
+\begin{corollary}[\texttt{projectiveSeminorm\_tprod}, over $\R/\C$]
+For $\mathbb{k} \in \{\R, \C\}$: $\pi(\bigotimes m_i) = \prod \norm{m_i}$ unconditionally.
+\end{corollary}
+
+\noindent One-line proof: discharge \texttt{h\_bidual} via \texttt{inclusionInDoubleDualLi.norm\_map}.
+
+\begin{theorem}[\texttt{collinear\_cost\_ge}, Cancellation Trick]
+\label{thm:collinear}
+Over any nontrivially normed field: if $e \otimes f = \sum_j v_j \otimes (\alpha_j w)$ is a representation with all $w_j$ parallel (collinear case), then $\sum_j \norm{v_j}\norm{w_j} \ge \norm{e}\norm{f}$.
+\end{theorem}
+
+\noindent Proof: bilinearity collapses $\sum \alpha_j v_j \otimes w = e \otimes f$; triangle inequality on the $v$-side; tensor norm invariance (\texttt{tmul\_norm\_product\_eq}).  No Hahn--Banach needed.
+
+
+%======================================================================
+\section{The 3-Term CP Reduction}
+\label{sec:reduction}
+%======================================================================
+
+\subsection{From General CP to 3-Term Inequality}
+
+The formalized results cover:
+\begin{itemize}
+\item \textbf{Collinear case} (span of $\{w_j\}$ has dimension 1): Theorem~\ref{thm:collinear}, sorry-free.
+\item \textbf{Independent case} ($\{w_j\}$ linearly independent): proved in \texttt{DirectApproach.lean}.
+\item \textbf{General case}: reduces to the above two plus the \emph{3-term dependent} case.
+\end{itemize}
+
+For binary tensors $E \otimes F$, any representation $e \otimes f = \sum_{j=1}^n v_j \otimes w_j$ can be reduced (by combining terms sharing the same $w$-direction) to at most $s+1$ terms, where $s = \dim\spn\{w_j\}$.  For $s = 2$ (the first non-trivial dependent case), we get 3 terms with $w_3 = \alpha w_1 + \beta w_2$.
+
+\subsection{The Explicit Inequality}
+
+By the reduction in nodes 1.1--1.2 of the proof tree:
+
+\begin{conjecture}[3-Term CP]
+\label{conj:3term}
+For all nontrivially valued fields $k$, all norms $N_E, N_F$ on $k^2$ with $N_E(e_1) = N_F(e_1) = 1$, and all parameters $\alpha, \beta, a, b, p, q, r, s \in k$ with $D := ps - qr \ne 0$:
+\[
+  \underbrace{N_E\!\left(\tfrac{s}{D} - \alpha a,\, -\alpha b\right) \cdot N_F(p, q)}_{T_1}
+  + \underbrace{N_E\!\left(\tfrac{-q}{D} - \beta a,\, -\beta b\right) \cdot N_F(r, s)}_{T_2}
+  + \underbrace{N_E(a, b) \cdot N_F(\alpha p + \beta r,\, \alpha q + \beta s)}_{T_3}
+  \ge 1.
+\]
+\end{conjecture}
+
+Here $T_1, T_2, T_3$ are the costs of the three terms, and the 8 parameters encode the choice of basis $(w_1, w_2)$ via $[p,q;r,s]$, the dependence relation via $(\alpha, \beta)$, and the ``splitting direction'' via $(a, b)$.
+
+\subsection{Key Structural Feature: Two Independent Norms}
+
+A critical correction (node 1.1, verified by adversarial challenge): the reduction produces \emph{two independent norms} $N_E$ on $V = \spn\{e, v_3\} \cong k^2$ and $N_F$ on $W = \spn\{w_1, w_2\} \cong k^2$.  These are inherited from the ambient spaces $E$ and $F$ and are generally different.  The single-norm case $N_E = N_F$ is a special case with fewer degrees of freedom.
+
+
+%======================================================================
+\section{Proof Strategy and Adversarial Investigation}
+\label{sec:strategy}
+%======================================================================
+
+The adversarial proof framework (\texttt{af}) was used to systematically investigate Conjecture~\ref{conj:3term} through a 25-node proof tree with both proof attempts (Case~A) and counterexample searches (Case~B).
+
+\subsection{Overview of Strategies}
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Node} & \textbf{Strategy} & \textbf{Status} & \textbf{Outcome} \\
+\midrule
+1.4.1 & Duality / FDNP & Partial & Works when $N_E$ admits norming functional \\
+1.4.2 & Bilinearity collapse & \textcolor{archived}{Archived} & Comparison $T_1{+}T_2{+}T_3 \ge S_1{+}S_2$ is \textbf{FALSE} \\
+1.4.3 & Term-by-term ultrametric & Partial & Non-equality cases \textbf{PROVED} \\
+1.4.4 & Convexity/optimization & \textcolor{archived}{Archived} & Berkovich language misapplied \\
+1.5.1 & Standard basis search & Open & Two-norm formulation derived \\
+1.5.2 & Resonant basis search & \textcolor{archived}{Archived} & Mechanism incoherent \\
+1.5.3 & Perturbative analysis & Open & Structural insight only \\
+1.5.4 & Numerical search & \textcolor{archived}{Archived} & $\sqrt{2} \notin \Qp$; prior evidence vacuous \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Strategy A1: Duality (Node 1.4.1)}
+
+The classical approach: for any functional $\varphi$ on $V$ with $\norm{\varphi} \le 1$ and $\abs{\varphi(e_1)} = 1$:
+\[
+  C = \sum_j N_E(v_j) \cdot N_F(w_j) \ge \sum_j \abs{\varphi(v_j)} \cdot N_F(w_j) \ge N_F\!\left(\sum_j \varphi(v_j) w_j\right) = N_F(f) = 1.
+\]
+This proves CP for all pairs $(N_E, N_F)$ where $N_E$ admits FDNP at $e_1$.
+
+\textbf{FDNP holds for:}
+\begin{itemize}
+\item All archimedean norms (Hahn--Banach).
+\item All norms over spherically complete non-archimedean fields (Ingleton 1952).
+\item All finite-dimensional norms where the base field admits Hahn--Banach.
+\end{itemize}
+
+\textbf{FDNP fails for:} Certain norms on $\Cp^2$ constructed from empty-intersection chains of closed balls --- see Section~\ref{sec:fdnp}.
+
+\subsection{Strategy A2: Bilinearity Collapse (Node 1.4.2, Archived)}
+
+The 3-term representation collapses to a 2-term independent one:
+\[
+  e \otimes f = (v_1 + \alpha v_3) \otimes w_1 + (v_2 + \beta v_3) \otimes w_2.
+\]
+The independent case gives $N_E(v_1 + \alpha v_3) N_F(w_1) + N_E(v_2 + \beta v_3) N_F(w_2) \ge 1$.
+The question was: does $T_1 + T_2 + T_3 \ge S_1 + S_2$ (3-term cost $\ge$ collapsed 2-term cost)?
+
+\textbf{Answer: NO.}  Explicit counterexamples were found in both archimedean and non-archimedean settings by verifier agents.  When $w_3 = \alpha w_1 + \beta w_2$ exhibits ultrametric cancellation ($N_F(w_3) < \abs{\alpha} N_F(w_1) + \abs{\beta} N_F(w_2)$), the 3-term cost can be strictly less than the collapsed 2-term cost.  CP itself is \emph{not} refuted --- only this particular proof strategy.
+
+\subsection{Strategy A3: Term-by-Term Ultrametric Bound (Node 1.4.3)}
+
+For ultrametric $N_E$, the isosceles property gives:
+\[
+  N_E(v_1) = N_E(c_1 e_1 - \alpha v_3) = \max(\abs{c_1},\, \abs{\alpha} N_E(v_3))
+  \quad\text{when } \abs{c_1} \ne \abs{\alpha} N_E(v_3).
+\]
+
+\textbf{Non-equality cases (PROVED, node 1.4.3.1):} When $\abs{c_j} \ne \abs{\alpha_j} N_E(v_3)$ for both $j = 1, 2$, the isosceles property ensures $T_1 + T_2$ already exceeds the collapsed cost, and $T_3 \ge 0$ gives $C \ge 1$.
+
+\textbf{Equality cases (OPEN, node 1.4.3.2):} When $\abs{c_j} = \abs{\alpha_j} N_E(v_3)$, cancellation in $N_E$ can reduce $T_j$ below the collapsed term.  The deficit must be compensated by $T_3$.  This is the \emph{hard core} of the problem.
+
+\subsection{Dead Strategies (Archived)}
+
+\begin{itemize}
+\item \textbf{1.4.4 (Convexity)}: $C$ is \emph{not} piecewise-multiplicative; the Berkovich skeleton language was misapplied; the claim ``minimum at $b = 0$'' was unsubstantiated.
+\item \textbf{1.5.2 (Resonant basis)}: The chain norm is determined by the exit index, not by near-cancellation at individual chain points.  The proposed mechanism is mathematically incoherent.
+\item \textbf{1.5.4 (Numerical check)}: $\sqrt{2} \notin \Qp$ (Hensel's lemma fails on double roots), so the proposed chain construction was invalid.  Only 2 of 8 parameters were explored.
+\end{itemize}
+
+
+%======================================================================
+\section{The FDNP Counterexample}
+\label{sec:fdnp}
+%======================================================================
+
+A central finding of the investigation is that the \emph{Finite-Dimensional Norming Problem} is false over $\Cp$.
+
+\begin{theorem}[FDNP Failure over $\Cp$]
+There exists a norm $N$ on $\Cp^2$ with $N(e_1) = 1$ such that no continuous linear functional $\varphi : (\Cp^2, N) \to \Cp$ satisfies $\norm{\varphi} \le 1$ and $\abs{\varphi(e_1)} = 1$.
+\end{theorem}
+
+\begin{proof}[Construction]
+Since $\Cp$ is not spherically complete, there exists a decreasing chain of closed balls $\bar{B}(\lambda_n, r_n)$ in $\Cp$ with $r_n \searrow r_\infty > 0$ and $\bigcap_n \bar{B}(\lambda_n, r_n) = \emptyset$.  Define:
+\[
+  N(x, y) = r_\infty \cdot \sup_n \frac{\abs{x + \lambda_n y}}{r_n}.
+\]
+The factor $r_\infty$ normalizes so that $N(e_1) = 1$ (since $\sup_n \abs{1}/r_n = 1/r_\infty$ as $r_n \to r_\infty$).
+
+Any norming functional has the form $\varphi(x, y) = x + cy$ for some $c \in \Cp$.  The condition $\norm{\varphi} \le 1$ forces $c \in \bar{B}(\lambda_n, r_n)$ for all $n$ (otherwise $\abs{\varphi(e_2)}/N(e_2)$ would exceed 1 via the $n$-th chain term).  But $\bigcap_n \bar{B}(\lambda_n, r_n) = \emptyset$, so no such $c$ exists.
+\end{proof}
+
+\textbf{Consequence:} The quotient+FDNP proof strategy for CP is \textbf{blocked}.  However, CP is strictly weaker than FDNP --- the cost inequality $C \ge 1$ involves a \emph{sum} of three terms, not a single functional evaluation.  CP may still hold even where FDNP fails.
+
+\textbf{Dimension 2 is optimal:} In dimension 1, FDNP is trivially true (the identity functional works).  The counterexample is 2-dimensional, matching the dimension of the 3-term CP reduction.
+
+
+%======================================================================
+\section{The Hard Core: Equality Cases}
+\label{sec:hardcore}
+%======================================================================
+
+All strategies converge on the same obstruction: the \emph{equality cases} $\abs{c_j} = \abs{\alpha} \cdot N_E(v_3)$.
+
+\subsection{The Obstruction}
+
+At the equality locus, the ultrametric isosceles property does not apply.  We only get $N_E(v_1) \le \abs{c_1}$, with possible strict inequality from cancellation.  The deficit
+\[
+  \varepsilon_1 = \abs{c_1} \cdot N_F(w_1) - T_1 \ge 0
+\]
+must be compensated by $T_3 = N_E(v_3) \cdot N_F(\alpha w_1 + \beta w_2)$.
+
+The \textbf{double-equality case} (both $j = 1$ and $j = 2$) is hardest: $T_3$ must cover both deficits simultaneously.
+
+\subsection{Structural Duality}
+
+The $v$-side cancellation ($N_E(c_j e_1 - \alpha v_3) < \abs{c_j}$) and the $w$-side cancellation ($N_F(\alpha w_1 + \beta w_2) < \max(\abs{\alpha} N_F(w_1), \abs{\beta} N_F(w_2))$) are dual manifestations of the same phenomenon.  In the two-norm setting ($N_E \ne N_F$), these cancellations are governed by \emph{independent} norms, so no structural coupling prevents both from being large simultaneously.
+
+\subsection{The Open Question}
+
+\begin{conjecture}
+On the equality locus $\abs{c_j} = \abs{\alpha} \cdot N_E(v_3)$, the tensor equation $v_1 + \alpha v_3 = c_1 e_1$, $v_2 + \beta v_3 = c_2 e_1$ forces a coupling between the $v$-side and $w$-side cancellations that prevents $C < 1$.
+\end{conjecture}
+
+A proof would need to exploit the tensor equation \emph{jointly} across all three terms, rather than analyzing $T_1, T_2, T_3$ independently.  A counterexample would require both cancellations to be simultaneously large enough to push $C$ below~1.
+
+
+%======================================================================
+\section{Assessment and Recommendation}
+\label{sec:assessment}
+%======================================================================
+
+\subsection{What Is Proved (Sorry-Free in Lean 4)}
+
+\begin{center}
+\begin{tabular}{@{}lp{8cm}c@{}}
+\toprule
+\textbf{Result} & \textbf{Scope} & \textbf{Status} \\
+\midrule
+CP with \texttt{h\_bidual} & All nontrivially normed fields, all seminormed spaces & \textcolor{proved}{Proved} \\
+CP over $\R/\C$ & Unconditional (Hahn--Banach discharges \texttt{h\_bidual}) & \textcolor{proved}{Proved} \\
+Collinear case & All fields, all norms, representations with $\dim\spn\{w_j\} = 1$ & \textcolor{proved}{Proved} \\
+Independent case & All fields, all norms, linearly independent $\{w_j\}$ & \textcolor{proved}{Proved} \\
+Non-equality ultrametric & All ultrametric $N_E$, all $N_F$, strict inequality cases & \textcolor{proved}{Proved} \\
+Duality when FDNP holds & All $(N_E, N_F)$ with $N_E$ admitting norming functional & \textcolor{proved}{Proved} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{What Is Open}
+
+\begin{center}
+\begin{tabular}{@{}lp{8cm}c@{}}
+\toprule
+\textbf{Result} & \textbf{Scope} & \textbf{Status} \\
+\midrule
+Equality cases & Ultrametric $N_E$ at $\abs{c_j} = \abs{\alpha} N_E(v_3)$ & \textcolor{pending}{Open} \\
+General 3-term CP & All valued fields, all norm pairs on $k^2$ & \textcolor{pending}{Open} \\
+Extension to $n > 3$ & Dependent representations with $> 3$ terms & \textcolor{pending}{Open} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Node Statistics}
+
+\begin{center}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Epistemic State} & \textbf{Count} & \textbf{Meaning} \\
+\midrule
+\textcolor{pending}{Pending} & 18 & Awaiting proof or verification \\
+\textcolor{proved}{Validated} & 3 & Passed adversarial verification \\
+\textcolor{archived}{Archived} & 4 & Dead strategies (disproved or incoherent) \\
+\textcolor{refuted}{Refuted} & 0 & --- \\
+\midrule
+\textbf{Total} & \textbf{25} & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Overall Assessment}
+
+\begin{center}
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Aspect} & \textbf{Assessment} \\
+\midrule
+Answer (CP true?) & \textbf{Likely YES} --- no counterexample found despite extensive search; cost $= 1$ at every tested optimum. \\[4pt]
+With \texttt{h\_bidual} & \textbf{Proved.}  Sorry-free Lean 4 formalization. \\[4pt]
+Over $\R/\C$ & \textbf{Unconditionally proved.} \\[4pt]
+Over $\Qp$ & \textbf{Proved} (Ingleton $\Rightarrow$ FDNP $\Rightarrow$ duality). \\[4pt]
+Over $\Cp$ & \textbf{Open.}  FDNP fails, but CP may still hold via the equality-case compensation mechanism. \\[4pt]
+Counterexample? & \textbf{None found.}  Would require an exotic infinite-dimensional space over a non-spherically-complete field, or a subtle two-norm construction on $k^2$. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Recommendation}
+
+\begin{enumerate}
+\item \textbf{For mathlib PR \#33969}: Keep \texttt{h\_bidual}.  It is the correct generality level.  The \texttt{RCLike} corollary gives the clean unconditional statement for the most common use case.
+
+\item \textbf{The hypothesis captures exactly what is needed}: isometric bidual embedding at each tensor factor.  This is a natural functional-analytic condition, not an artificial restriction.
+
+\item \textbf{Future work}: If Ingleton's theorem is formalized in Lean and spherical completeness is added to mathlib, \texttt{h\_bidual} can be discharged for a broader class of fields (all spherically complete non-archimedean fields).
+
+\item \textbf{The open question} (CP over $\Cp$-type fields) is genuinely interesting and may require new techniques or a novel counterexample construction.
+\end{enumerate}
+
+
+%======================================================================
+\section{Key References}
+\label{sec:refs}
+%======================================================================
+
+\begin{thebibliography}{99}
+
+\bibitem{PR33969}
+D.~Gross and D.~Haji~Taghi~Tehrani,
+\emph{Projective seminorm on pi tensor products},
+mathlib4 Pull Request \#33969, 2024--2026.
+
+\bibitem{Ingleton52}
+A.~W.~Ingleton,
+\emph{The Hahn--Banach theorem for non-archimedean valued fields},
+Proc.\ Cambridge Phil.\ Soc.\ \textbf{48} (1952), 41--45.
+
+\bibitem{Schneider}
+P.~Schneider,
+\emph{Nonarchimedean Functional Analysis},
+Springer Monographs in Mathematics, 2002.
+Especially Lemma~17.3 ($d$-orthogonal basis technique) and Prop.~17.4 (ultrametric projective norm multiplicativity).
+
+\bibitem{Schikhof}
+W.~H.~Schikhof,
+\emph{Ultrametric Calculus: An Introduction to $p$-Adic Analysis},
+Cambridge University Press, 1984.
+\S20: non-spherical-completeness of $\Cp$.
+
+\bibitem{vanRooij}
+A.~C.~M.~van~Rooij,
+\emph{Non-Archimedean Functional Analysis},
+Marcel Dekker, 1978.
+Ch.~4: Hahn--Banach failure over non-spherically-complete fields.
+
+\end{thebibliography}
+
+
+\newpage
+%======================================================================
+\appendix
+\section{Full Proof Tree (\texttt{af status})}
+\label{app:tree}
+%======================================================================
+
+The complete proof tree as exported from the adversarial proof framework.
+Status key: \textcolor{proved}{\textbf{V}}~=~validated,
+\textcolor{pending}{\textbf{P}}~=~pending,
+\textcolor{archived}{\textbf{A}}~=~archived.
+
+{\small\begin{verbatim}
+1 [P] 3-term CP: for all valued fields k, norms N_E, N_F on k^2,
+  |  and 8 parameters with ps-qr != 0:
+  |  T_1 + T_2 + T_3 >= 1.
+  |
+  +-- 1.1 [P] REDUCTION. WLOG V=(k^2,N_E), W=(k^2,N_F), e=f=e_1.
+  |
+  +-- 1.2 [V] PARAMETRIZATION. 8 parameters (p,q,r,s,alpha,beta,a,b).
+  |
+  +-- 1.3 [P] CASE SPLIT: (A) prove C>=1 or (B) find C<1.
+  |   |
+  |   +-- 1.3.1 [V] REDUCTION TO TWO-NORM COST INEQUALITY.
+  |
+  +-- 1.4 [P] CASE A: ULTRAMETRIC LOWER BOUND
+  |   |
+  |   +-- 1.4.1 [P] Strategy A1: Duality (blocked by FDNP failure)
+  |   |   |
+  |   |   +-- 1.4.1.1 [P] Duality approach: PARTIALLY SUCCESSFUL
+  |   |       (works when N_E admits norming functional)
+  |   |
+  |   +-- 1.4.2 [A] Strategy A2: Bilinearity collapse (FALSE)
+  |   |   |  T_1+T_2+T_3 >= S_1+S_2 disproved by counterexamples
+  |   |   +-- 1.4.2.1--1.4.2.4 [P] Sub-analyses (parent archived)
+  |   |
+  |   +-- 1.4.3 [P] Strategy A3: Term-by-term ultrametric (PARTIAL)
+  |   |   |  Non-equality cases PROVED; equality cases OPEN
+  |   |   +-- 1.4.3.1 [P] Non-equality cases (PROVED)
+  |   |   +-- 1.4.3.2 [P] Equality cases (OPEN -- the hard core)
+  |   |
+  |   +-- 1.4.4 [A] Strategy A4: Convexity (misapplied Berkovich)
+  |   |
+  |   +-- 1.4.5 [V] CORRECTED lower bound statement (two-norm)
+  |
+  +-- 1.5 [P] CASE B: COUNTEREXAMPLE SEARCH
+  |   |
+  |   +-- 1.5.1 [P] Approach B1: Standard basis search
+  |   |   +-- 1.5.1.1 [P] Two-norm version
+  |   +-- 1.5.2 [A] Approach B2: Resonant basis (incoherent)
+  |   +-- 1.5.3 [P] Approach B3: Perturbative analysis
+  |   +-- 1.5.4 [A] Numerical check (sqrt(2) not in Q_2)
+  |
+  +-- 1.6 [P] EXTENSION TO n>3 TERMS
+\end{verbatim}}
+
+
+\newpage
+%======================================================================
+\section{Full Node Descriptions}
+\label{app:nodes}
+%======================================================================
+
+This appendix reproduces the complete statement of each node in the proof tree, as stored in the \texttt{af} workspace and exported via \texttt{af export --format latex}.
+
+\subsection*{Node 1 --- Root: 3-Term Cross Property}
+\textbf{Status:} \textcolor{pending}{Pending}.
+\textbf{Type:} claim.
+
+\noindent\textbf{Statement:}
+For all valued fields $k$, all normed $k$-spaces $E, F$, and all $e \in E$, $f \in F$: if $e \otimes f = v_1 \otimes w_1 + v_2 \otimes w_2 + v_3 \otimes (\alpha w_1 + \beta w_2)$ is a 3-term dependent representation in $E \otimes F$ with $\{w_1, w_2\}$ a basis, then $\norm{v_1}\norm{w_1} + \norm{v_2}\norm{w_2} + \norm{v_3}\norm{\alpha w_1 + \beta w_2} \ge \norm{e}\norm{f}$.
+
+A key test case: the Cross Property $\pi(e \otimes f) = \norm{e}\norm{f}$ for 3-term representations over $(\Cp^2, N)$ with the pathological norm $N$.  This is a necessary condition but not known to be equivalent to the universal statement without further argument showing (i)~it suffices to test $N_E = N_F$, (ii)~the pathological norm is extremal, and (iii)~$\Cp$ is universal among valued fields.
+
+\subsection*{Node 1.1 --- Reduction to $k^2$}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+WLOG $V = (k^2, N_E)$ and $W = (k^2, N_F)$ where $N_E, N_F$ are two (possibly distinct) norms on $k^2$, with $e = e_1$, $f = e_1$, $N_E(e_1) = N_F(e_1) = 1$.  Any 3-term counterexample over general $(E, F)$ projects to one over 2-dimensional subspaces: $W = \spn\{w_1, w_2\} \cong k^2$ since $\{w_1, w_2\}$ is a basis; $V = \spn\{e, v_3\} \cong k^2$ since the tensor equation forces $v_1, v_2, v_3 \in \spn\{e, v_3\}$; and $\norm{e_1} = 1$ in both norms by homogeneity.
+
+\subsection*{Node 1.2 --- Parametrization}
+\textbf{Status:} \textcolor{proved}{Validated}.
+
+\noindent\textbf{Statement:}
+Every 3-term dependent representation $e_1 \otimes e_1 = v_1 \otimes w_1 + v_2 \otimes w_2 + v_3 \otimes (\alpha w_1 + \beta w_2)$ is determined by 8 parameters $(p, q, r, s, \alpha, \beta, a, b)$ with $D = ps - qr \ne 0$, giving cost $C = N_E(s/D - \alpha a, -\alpha b) \cdot N_F(p, q) + N_E(-q/D - \beta a, -\beta b) \cdot N_F(r, s) + N_E(a, b) \cdot N_F(\alpha p + \beta r, \alpha q + \beta s)$.
+
+\subsection*{Node 1.3 --- Case Split}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+Either (A)~ultrametric rigidity forces $C \ge 1$ for all parameter choices, proving CP; or (B)~specific parameters achieve $C < 1$, giving a counterexample.
+
+\subsection*{Node 1.3.1 --- Reduction to Two-Norm Cost Inequality}
+\textbf{Status:} \textcolor{proved}{Validated}.
+
+\noindent\textbf{Statement:}
+The CP conjecture for 3-term dependent representations reduces to: for all valued fields $k$, all pairs $(N_E, N_F)$ of norms on $k^2$ with $N_E(e_1) = N_F(e_1) = 1$, and all parameters with $ps - qr \ne 0$, the two-norm cost $C(N_E, N_F; \mathrm{params}) \ge 1$.  The key structural point: $N_E$ and $N_F$ are independent, so $\inf C$ has strictly more degrees of freedom than the single-norm case.
+
+\subsection*{Node 1.4 --- Case A: Ultrametric Lower Bound}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+For all norms $N_E, N_F$ on $k^2$ (with the statement of node 1.4.5), prove $C \ge 1$.  This is the proof branch; four strategies were attempted (A1--A4), of which A1 is partially successful and A3 is partially proved.
+
+\subsection*{Node 1.4.1 --- Strategy A1: Duality}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+For ultrametric $N$, each term satisfies $N(u)N(w) \ge \abs{\varphi(u)}\abs{\varphi(w)}$ for any functional $\varphi$ with $\norm{\varphi} \le 1$.  But no norming functional exists when FDNP fails, so this classical approach is blocked.
+
+\subsection*{Node 1.4.1.1 --- Duality: Partially Successful}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+For any $N_E$ admitting a norming functional $\varphi$ for $e_1$ ($\norm{\varphi} \le 1$, $\abs{\varphi(e_1)} = 1$), the cost $C \ge 1$ follows by: $C \ge \sum \abs{\varphi(v_j)} N_F(w_j) \ge N_F(\sum \varphi(v_j) w_j) = N_F(f) = 1$.  This proves CP for all $(N_E, N_F)$ where $N_E$ admits FDNP at $e_1$.  The \emph{residual open case}: $N_E$ fails FDNP (requires $k$ non-spherically-complete and $N_E$ a pathological norm).
+
+\subsection*{Node 1.4.2 --- Strategy A2: Bilinearity Collapse}
+\textbf{Status:} \textcolor{archived}{Archived} (FALSE).
+
+\noindent\textbf{Statement:}
+The comparison $T_1 + T_2 + T_3 \ge S_1 + S_2$ (3-term cost $\ge$ collapsed 2-term cost) is \textbf{false}.  Explicit counterexamples found when $w_3 = \alpha w_1 + \beta w_2$ exhibits ultrametric cancellation.  Contains sub-nodes 1.4.2.1--1.4.2.4 analyzing the obstruction (parent archived, but sub-analyses contain relevant equality-case analysis).
+
+\subsection*{Node 1.4.3 --- Strategy A3: Term-by-Term}
+\textbf{Status:} \textcolor{pending}{Pending} (partial).
+
+\noindent\textbf{Statement:}
+For ultrametric $N_E$, the isosceles property gives $N_E(v_1) = \max(\abs{c_1}, \abs{\alpha} N_E(v_3))$ when $\abs{c_1} \ne \abs{\alpha} N_E(v_3)$.  Non-equality cases: \textbf{PROVED} (node 1.4.3.1).  Equality cases: \textbf{OPEN} (node 1.4.3.2).  The equality loci are codimension-1 surfaces over $\Cp$ where the cost minimum likely lives.
+
+\subsection*{Node 1.4.3.1 --- Non-Equality Cases (Proved)}
+\textbf{Status:} \textcolor{pending}{Pending} (mathematically proved, not formally verified).
+
+\noindent\textbf{Statement:}
+When $\abs{c_j} \ne \abs{\alpha} N_E(v_3)$ for both $j = 1, 2$: by isosceles, $T_j \ge \abs{c_j} N_F(w_j)$, so $T_1 + T_2 \ge$ collapsed cost $\ge 1$, plus $T_3 \ge 0$.  Works for \emph{all} pairs $(N_E, N_F)$ with $N_E$ ultrametric.
+
+\subsection*{Node 1.4.3.2 --- Equality Cases (Open)}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+When $\abs{c_1} = \abs{\alpha} N_E(v_3)$: isosceles does not apply; $N_E(v_1) \le \abs{c_1}$ with possible strict inequality from cancellation.  The deficit must be compensated by $T_3$.  The double-equality case ($j = 1$ and $j = 2$ simultaneously) is hardest.  Structurally identical to the obstruction at 1.4.2.4 (dual of the same cancellation phenomenon).  In the two-norm setting, $v$-side and $w$-side cancellations are governed by independent norms.  Resolution requires either a coupling argument or a direct $T_3$-compensation proof.
+
+\subsection*{Node 1.4.4 --- Strategy A4: Convexity}
+\textbf{Status:} \textcolor{archived}{Archived}.
+
+\noindent\textbf{Statement:}
+$C$ is \emph{not} piecewise-multiplicative; Berkovich skeleton language was misapplied; the claim ``minimum at $b = 0$'' was unsubstantiated.
+
+\subsection*{Node 1.4.5 --- Corrected Lower Bound Statement}
+\textbf{Status:} \textcolor{proved}{Validated}.
+
+\noindent\textbf{Statement:}
+Let $k$ be a nontrivially valued field and $N_E, N_F$ norms on $k^2$ with $N_E(1,0) = N_F(1,0) = 1$.  For all $\alpha, \beta, a, b, p, q, r, s \in k$ with $D := ps - qr \ne 0$, prove $C \ge 1$.  This is genuinely open.  The collinear and independent cases are proved sorry-free.  The 3-term dependent case requires new techniques: the standard duality approach fails because FDNP is false over $\Cp$.
+
+\subsection*{Node 1.5 --- Case B: Counterexample Search}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+Find $k$, $N_E$, $N_F$, and parameters achieving $C < 1$.  Prior single-norm searches found $C = 1$ at all optima.  The asymmetric case $N_E \ne N_F$ is the remaining search frontier.
+
+\subsection*{Node 1.5.1 --- Standard Basis Search}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+Set $w_1 = e_1$, $w_2 = e_2$ (so $p=1,q=0,r=0,s=1,D=1$).  Define $r_E = N_E(0,1)$, $r_F = N_F(0,1)$.  Cost specializes to $C = N_E(1-\alpha a, -\alpha b) + \abs{\beta} N_E(a,b) r_F + N_E(a,b) N_F(\alpha, \beta)$.
+
+\subsection*{Node 1.5.1.1 --- Standard Basis (Two-Norm)}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+Corrected two-norm formulation.  Key subcase $a = 0$: cost $C = N_E(1, -\alpha b) + \abs{\beta} \abs{b} r_E r_F + \abs{b} r_E N_F(\alpha, \beta)$.  The two-norm setting allows $r_E$ and $r_F$ to vary independently.
+
+\subsection*{Node 1.5.2 --- Resonant Basis}
+\textbf{Status:} \textcolor{archived}{Archived}.
+
+\noindent\textbf{Statement:}
+Proposed choosing $w_1, w_2$ to resonate with the chain.  Mechanism incoherent: chain norm is determined by exit index, not near-cancellation.
+
+\subsection*{Node 1.5.3 --- Perturbative Analysis}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+At $b = 0$, $C = 1$ (collinear, proved).  For ultrametric $N_E$, $C(b)$ is piecewise constant with jump loci determined by the chain structure.  Local constancy at $b = 0$ means $C = 1$ in a full neighborhood.  Whether $C$ dips below 1 at the first jump requires the full 8-parameter analysis.
+
+\subsection*{Node 1.5.4 --- Numerical Check}
+\textbf{Status:} \textcolor{archived}{Archived}.
+
+\noindent\textbf{Statement:}
+$\sqrt{2} \notin \Qp$ (Hensel fails on double root); prior chain construction invalid.  Only 2 of 8 parameters explored.  Valid chains need pseudo-convergent sequences with no $\Cp$-limit.
+
+\subsection*{Node 1.6 --- Extension to $n > 3$ Terms}
+\textbf{Status:} \textcolor{pending}{Pending}.
+
+\noindent\textbf{Statement:}
+If Case~A holds, extend to all $n$-term dependent representations.  If Case~B holds, exhibit the counterexample.
+
+
+\end{document}

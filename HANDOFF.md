@@ -1155,3 +1155,30 @@ rather than analyzing T₁, T₂, T₃ independently.
    - Or: search for counterexamples in the two-norm equality case
 4. The duality partial success (1.4.1.1) reduces the open case to: k non-spherically-complete
    AND N_E fails FDNP at e₁. This is a very specific setting — analyze it directly
+
+### Session 18 (2026-02-10): PDF report generated
+
+**What was done:**
+- Generated a 13-page pdflatex report at `report/report.tex` (→ `report/report.pdf`)
+- Follows the format of `~/Projects/firstproof/problem01/report.tex` and `problem02/report.tex`
+- Contents:
+  - §1: Problem statement (CP, h_bidual, why it's hard)
+  - §2: Lean 4 formalization summary (8 files, ~670 LOC, sorry-free)
+  - §3: 3-term CP reduction (parametrization, two-norm cost inequality)
+  - §4: Proof strategy + adversarial investigation (4 strategies attempted, 2 partially successful, 4 archived as dead)
+  - §5: FDNP counterexample over ℂ_p (the key negative result)
+  - §6: The hard core — equality cases (the open frontier)
+  - §7: Assessment and recommendation (keep h_bidual)
+  - Appendix A: Full proof tree from `af status`
+  - Appendix B: Complete node descriptions from `af export --format latex` (all 25 nodes)
+- Used `af export --format latex` for the appendix node descriptions
+
+**Current state:**
+- Report complete at `report/report.pdf`
+- All Lean code remains sorry-free
+- 3-term CP inequality remains open (equality cases are the hard core)
+
+**Next session should:**
+1. Attack the equality-case obstruction (node 1.4.3.2)
+2. Or: attempt numerical counterexample search with proper ℂ_p chains
+3. Or: share report with David Gross for feedback
