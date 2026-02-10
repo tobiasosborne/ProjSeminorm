@@ -1,0 +1,1 @@
+{"type":"def_added","timestamp":"2026-02-10T10:38:03.955076488Z","definition":{"id":"6dec6304b37fb3f8","name":"bilinearity_collapse","definition":"Given e⊗f = Σ vⱼ⊗wⱼ with wⱼ∈span(w₁,w₂), write wⱼ=αⱼw₁+βⱼw₂. Then Σ vⱼ⊗wⱼ = (Σαⱼvⱼ)⊗w₁ + (Σβⱼvⱼ)⊗w₂. This 2-term independent representation has cost ≥ ‖e‖‖f‖ by the proved independent case.","created":"2026-02-10T10:38:03.953813805Z"}}

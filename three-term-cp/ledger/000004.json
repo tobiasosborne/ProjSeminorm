@@ -1,0 +1,1 @@
+{"type":"def_added","timestamp":"2026-02-10T10:38:03.918461579Z","definition":{"id":"4f1ad3a20a41cc89","name":"pathological_norm","definition":"Given a decreasing chain (λₙ,rₙ) in Cₚ with ∩ B̄(λₙ,rₙ)=∅, rₙ↘r∞∉p^Q, WLOG λ₀=0. The pathological norm on Cₚ² is N(x,y) := r∞ · supₙ |x+λₙy|/rₙ. Key values: N(1,0)=1, N(0,1)=r₀.","created":"2026-02-10T10:38:03.916988113Z"}}

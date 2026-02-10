@@ -1033,10 +1033,50 @@ Open: non-spherically complete NA fields like ℂ_p.
 - `CROSS_PROPERTY_REPORT.md` documents the 3-agent CP vs HB investigation
 - All existing Lean code remains sorry-free (no new Lean code this session)
 
-**TOP PRIORITY for next session: Numerical FDNP investigation**
-1. Write a SageMath/Python script to test FDNP over ℚ_p
-2. Use the Ingleton pathological 2D norm on k²: ‖(x,y)‖ = max(|x|, |y|, |x−y|/|ρ|)
-3. For each f in a grid, compute dist(f, H) over all hyperplanes H and check dist(f,H) = ‖f‖
-4. Test over ℚ_2, ℚ_3, ℚ_5 with increasing precision
-5. This is fully computable: value group |k×| = pℤ is discrete, norms explicit
-6. A single counterexample disproves FDNP; universal success builds confidence for proof
+**TOP PRIORITY for next session: Resolve the 3-term CP inequality over the pathological norm**
+
+### Session 16 (2026-02-10): FDNP settled — counterexample confirmed, CP reduced to explicit inequality
+
+**What was done:**
+- Critically evaluated an argument showing FDNP **fails** over ℂ_p in dimension 2
+- **Verdict: the counterexample is correct.** The construction:
+  - Take a decreasing chain (λₙ, rₙ) in ℂ_p with ∩ B̄(λₙ,rₙ) = ∅ (exists by non-spherical-completeness)
+  - Define norm N(x,y) = r∞ · supₙ |x+λₙy|/rₙ on ℂ_p², rescaled so N(e₁)=1
+  - Norming condition forces c = φ(e₂) into the empty intersection → no norming functional
+  - Key normalization fix: the argument as presented had a gap (‖f‖ = 1/r∞ ≠ 1);
+    rescaling by r∞ fixes it cleanly
+- This was NOT new — Agent Alpha (Session 15) had already found the same construction
+  in CROSS_PROPERTY_REPORT §2.2, and PROOF_STRATEGY §4.4 noted Hahn-Banach fails over ℂ_p
+- **Consequence: the quotient + FDNP proof strategy CANNOT give unconditional CP**
+- **However: CP itself is strictly weaker than FDNP and may still be true**
+- Derived the explicit 3-term CP test case:
+  - E = F = (ℂ_p², N) with pathological norm, e = f = e₁
+  - Cost C = N(c₁-αa,-αb)N(p,q) + N(c₂-βa,-βb)N(r,s) + N(a,b)N(αp+βr,αq+βs)
+  - CP ⟺ C ≥ 1 for all 8 parameters with ps ≠ qr
+- Set up adversarial proof framework in `three-term-cp/` with 19 nodes:
+  - 4 proof strategies for Case A (CP holds): duality dead-end, collapse comparison,
+    ultrametric case analysis, optimization/convexity
+  - 4 counterexample approaches for Case B (CP fails): standard basis search,
+    resonant basis, perturbative, numerical
+  - Key insight from 1.4.2.3: when N(v₁) ≥ |α|N(v₃) for BOTH terms (isosceles
+    dominance), C ≥ collapsed cost ≥ 1 automatically. The hard case is when
+    the third term must compensate for ultrametric cancellation in w₃ = αw₁+βw₂.
+
+**Key references:**
+- Schikhof, *Ultrametric Calculus* §20 (non-spherical-completeness of ℂ_p)
+- van Rooij, *Non-Archimedean FA* Ch.4 (Hahn-Banach failure)
+- Ingleton 1952 (Hahn-Banach over spherically complete fields)
+
+**Current state:**
+- `three-term-cp/` contains the af proof workspace (19 nodes, all pending)
+- All existing Lean code remains sorry-free (no new Lean code this session)
+- FDNP is definitively settled: FALSE over ℂ_p, so the quotient strategy is blocked
+- The open question is now purely: does the 3-term cost inequality C ≥ 1 hold?
+
+**Next session should:**
+1. `cd three-term-cp && af status` to see the proof tree
+2. Attack node 1.4.2.3 (ultrametric case analysis) — the most promising proof path
+3. Or attack node 1.5.1 (standard basis counterexample search) — concrete computation
+4. The critical sub-question is 1.4.2.4: when |α|N(w₁) = |β|N(w₂), can ultrametric
+   cancellation in N(αw₁+βw₂) make the third term too small to compensate?
+5. Numerical experiments (node 1.5.4) could resolve the question empirically
