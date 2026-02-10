@@ -1080,3 +1080,78 @@ Open: non-spherically complete NA fields like ℂ_p.
 4. The critical sub-question is 1.4.2.4: when |α|N(w₁) = |β|N(w₂), can ultrametric
    cancellation in N(αw₁+βw₂) make the third term too small to compensate?
 5. Numerical experiments (node 1.5.4) could resolve the question empirically
+
+### Session 17 (2026-02-10): BFS verification sweep — critical finding, then BFS prover sweep
+
+**What was done:**
+- Ran adversarial proof framework BFS sweep on the 19-node `three-term-cp/` proof tree
+- Dispatched 24 Opus subagent jobs (13 provers, 11 verifiers) across 12 waves
+- Tree grew from 19 → 25 nodes (6 corrected child nodes added by provers)
+
+**Critical structural fix (Session 17a — verifier sweep, waves 1-3):**
+- **ch-d076e166088 on node 1.1**: The reduction E=F=(ℂ_p²,N) with ONE norm is wrong.
+  Correct: V=(k²,N_E) and W=(k²,N_F) with TWO INDEPENDENT norms.
+  This propagated to all downstream nodes.
+- Verifiers filed 15 challenges across 6 depth-0/1 nodes.
+- Node 1.2 (parametrization algebra) validated as correct.
+
+**BFS prover sweep (Session 17b — waves 1-12):**
+
+Provers addressed all challenges at depths 0-2. Key outcomes:
+
+| Node | Action | Result |
+|------|--------|--------|
+| 1 | Refined | "Equivalently" → "A key test case" (3 gaps acknowledged) |
+| 1.1 | Refined | Single norm → two independent norms N_E, N_F |
+| 1.3 | Refined + child 1.3.1 | Tautological case split → substantive two-norm reduction |
+| 1.4 | Refined + child 1.4.5 | Single norm → universal quantification over all norm pairs |
+| 1.5 | Refined | Two-norm cost defined; N_E≠N_F identified as search frontier |
+| **1.4.2** | **ARCHIVED** | Comparison inequality T₁+T₂+T₃ ≥ S₁+S₂ is **FALSE** (explicit counterexamples in both archimedean and non-archimedean settings) |
+| **1.4.4** | **ARCHIVED** | C is NOT piecewise-multiplicative; Berkovich language misapplied; "min at b=0" unsubstantiated |
+| **1.5.2** | **ARCHIVED** | Resonant basis mechanism mathematically incoherent (chain norm determined by exit index, not near-cancellation); tensor constraint gives hard floor |
+| **1.5.4** | **ARCHIVED** | √2 ∉ Q₂ (Hensel fails on double root); prior numerical evidence vacuous (2 of 8 params explored) |
+| 1.4.1 | Refined + child 1.4.1.1 | "Dead end" → partially successful (duality works when FDNP holds for N_E) |
+| 1.4.3 | Refined + children 1.4.3.1/1.4.3.2 | Non-equality cases PROVED; equality cases identified as hard core |
+| 1.5.1 | Refined + child 1.5.1.1 | Two-norm standard basis search formulated |
+| 1.5.3 | Refined | Piecewise constancy is correct but gives no analytical reduction |
+
+**Validated nodes (3):** 1.2, 1.3.1, 1.4.5
+
+**High-value findings from verifier agents:**
+1. **1.4.2 disproof**: The bilinearity collapse comparison T₁+T₂+T₃ ≥ S₁+S₂ fails when
+   w₃=αw₁+βw₂ exhibits norm cancellation (N_F(w₃) < |α|N_F(w₁)+|β|N_F(w₂)). This kills
+   the entire 1.4.2.x subtree. CP itself is NOT refuted.
+2. **1.4.1 partial success**: The duality approach Σ N_E(vⱼ)·N_F(wⱼ) ≥ Σ |φ(vⱼ)|·N_F(wⱼ)
+   ≥ N_F(Σ φ(vⱼ)·wⱼ) = 1 needs FDNP for N_E ONLY (not both norms). This proves CP for
+   all pairs (N_E,N_F) where N_E admits a norming functional for e₁.
+3. **1.4.3 partial proof**: The isosceles property handles all non-equality cases
+   (|c_j| ≠ |α|·N_E(v₃)). Only the equality loci remain open.
+4. **1.5.2 chain norm formula**: N(1,c) = |1+c·λ_{M+1}| where M is the exit index of
+   -1/c from the chain. The supremum is dominated by the tail, not individual chain points.
+5. **1.5.4 mathematical error**: √2 does not exist in Q₂ (value group obstruction).
+   Valid chains need pseudo-convergent sequences with no C₂-limit.
+
+**The hard core of the problem (all strategies converge here):**
+The equality cases |c_j| = |α|·N_E(v₃) (equivalently |α|·N_F(w₁) = |β|·N_F(w₂) on the
+w-side). At these codimension-1 loci, ultrametric cancellation can reduce N_E(v_j) below
+|c_j|, creating a deficit. Whether T₃ = N_E(v₃)·N_F(αw₁+βw₂) always compensates is THE
+open question. The v-side and w-side cancellations are dual manifestations of the same
+phenomenon. A viable proof likely needs to handle them jointly through the tensor equation,
+rather than analyzing T₁, T₂, T₃ independently.
+
+**Current state:**
+- `three-term-cp/`: 25 nodes, 3 validated, 4 archived, 18 pending, 14 open challenges (mostly minor/note)
+- All Lean code remains sorry-free (no new Lean code this session)
+- Depth-3 nodes (1.4.2.1-1.4.2.4) are moot (parent archived) but contain relevant analysis of the equality obstruction
+- Node 1.6 (extension to n>3 terms) not yet verified
+
+**Next session should:**
+1. `cd three-term-cp && af status` to see the updated proof tree
+2. Archive depth-3 nodes 1.4.2.1-1.4.2.4 (parent dead)
+3. Focus on the equality-case obstruction (nodes 1.4.3.2 / 1.4.2.4):
+   - Can the tensor equation v₁+αv₃=c₁e₁, v₂+βv₃=c₂e₁ be exploited to couple
+     the v-side and w-side cancellations?
+   - Is there a direct proof that T₁+T₃ ≥ |c₁|·N_F(w₁) at the equality locus?
+   - Or: search for counterexamples in the two-norm equality case
+4. The duality partial success (1.4.1.1) reduces the open case to: k non-spherically-complete
+   AND N_E fails FDNP at e₁. This is a very specific setting — analyze it directly
