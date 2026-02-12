@@ -1394,3 +1394,31 @@ rather than analyzing T₁, T₂, T₃ independently.
    - Use `LinearMap.mkContinuous` for coordinate CLMs (no `CompleteSpace` needed)
    - Chain via `dualDistribL` as in WithBidual.lean
    - ε→0 limit via `le_of_forall_lt` or direct contradiction
+
+### Session 25 (2026-02-12): Fix mathlib API breakages + isUltrametricDist_quotient
+
+**What was done:**
+- Discovered SchneiderReduction.lean was NOT in the build target (`ProjSeminorm.lean` didn't import it)
+  and had 5+ errors from mathlib API changes. Fixed all errors:
+  1. `Type*` → `Type _` in `suffices` of `exists_epsOrthogonal_basis` (universe mismatch)
+  2. `LinearMap.mul'` → `LinearMap.lsmul` in `coord_tensor_eq` (API renamed)
+  3. `inv_le_one_iff_of_pos` → `inv_le_one₀` (2 occurrences)
+  4. `Module.finrank_pos_of_exists_ne_zero` → `Module.finrank_pos_iff_exists_ne_zero.mpr`
+  5. `mul_le_mul` argument order fix (4th arg needs `0 ≤ b`, not `a ≤ b`)
+- Added `isUltrametricDist_quotient` lemma (sorry-free): quotient of ultrametric space is ultrametric.
+  Proof: by contradiction using `QuotientAddGroup.norm_lt_iff` to get representatives, ultrametric
+  inequality on F, and `Submodule.Quotient.norm_mk_le` for the quotient norm bound.
+- Added `import Mathlib.Analysis.Normed.Group.Quotient` (needed for quotient norm instances)
+- Added `import ProjSeminorm.SchneiderReduction` to `ProjSeminorm.lean` (now in build target)
+- Build verified: 2341 jobs, 0 errors, 2 sorry warnings
+
+**Current state:**
+- 9 Lean files, ~880 LOC. SchneiderReduction.lean has 2 sorries remaining:
+  - `exists_epsOrthogonal_basis` inductive step (d=n+1): quotient + lift + ε-orthogonality
+  - `projectiveSeminorm_tprod_ge_ultrametric`: duality approach via ε→0
+
+**Next session should:**
+1. Fill `exists_epsOrthogonal_basis` inductive step — `isUltrametricDist_quotient` is now available.
+   Need: pick nonzero v₀, quotient F/⟨v₀⟩, `FiniteDimensional.finiteDimensional_quotient`,
+   `Submodule.finrank_quotient_add_finrank`, IH for basis, lift + combine with `Basis.mkFinCons`.
+2. Fill `projectiveSeminorm_tprod_ge_ultrametric` (ε→0 limit)

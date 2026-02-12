@@ -10,6 +10,7 @@ import Mathlib.Analysis.Normed.Group.Ultra
 import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.LinearAlgebra.Dimension.Finrank
 import Mathlib.Data.Fintype.Order
+import Mathlib.Analysis.Normed.Group.Quotient
 
 /-!
 # Schneider Reduction: Cross Property for Ultrametric Norms
@@ -98,15 +99,37 @@ lemma exists_epsOrthogonal_basis_one [IsUltrametricDist E]
     (hE : Module.finrank 𝕜 E = 1) (ε : ℝ) (hε : 0 < ε) :
     ∃ b : Module.Basis (Fin 1) 𝕜 E, IsEpsOrthogonal ε b := by
   haveI : FiniteDimensional 𝕜 E := Module.finite_of_finrank_eq_succ hE
-  haveI : Module.Free 𝕜 E := Module.Free.of_divisionRing
+  haveI : Module.Free 𝕜 E := Module.Free.of_divisionRing (K := 𝕜) (V := E)
   set b := Module.finBasisOfFinrankEq 𝕜 E hE
   refine ⟨b, hε, fun c => ?_⟩
   simp only [Fin.sum_univ_one, norm_smul, ciSup_unique, Fin.default_eq_zero]
   have h1 : (0 : ℝ) ≤ ‖c 0‖ * ‖b 0‖ := mul_nonneg (norm_nonneg _) (norm_nonneg _)
   have h2 : (1 + ε)⁻¹ ≤ 1 := by
-    rw [inv_le_one_iff_of_pos (by linarith)]
+    rw [inv_le_one₀ (by linarith)]
     linarith
   linarith [mul_le_of_le_one_left h1 h2]
+
+-- ============================================================================
+-- Step 4b: Quotient of ultrametric space is ultrametric
+-- ============================================================================
+
+/-- The quotient of an ultrametric seminormed space by a submodule is ultrametric.
+Proof: the quotient norm is nonarchimedean (inherited from the original). -/
+lemma isUltrametricDist_quotient [IsUltrametricDist E] (p : Submodule 𝕜 E) :
+    IsUltrametricDist (E ⧸ p) := by
+  apply IsUltrametricDist.isUltrametricDist_of_isNonarchimedean_norm
+  intro x y
+  by_contra h
+  push_neg at h
+  have hx : ‖x‖ < ‖x + y‖ := lt_of_le_of_lt (le_max_left _ _) h
+  have hy : ‖y‖ < ‖x + y‖ := lt_of_le_of_lt (le_max_right _ _) h
+  rw [QuotientAddGroup.norm_lt_iff] at hx hy
+  obtain ⟨a, rfl, ha⟩ := hx
+  obtain ⟨b, rfl, hb⟩ := hy
+  have hmk : ‖(↑a + ↑b : E ⧸ p.toAddSubgroup)‖ ≤ ‖a + b‖ := by
+    change ‖(↑(a + b) : E ⧸ p.toAddSubgroup)‖ ≤ ‖a + b‖
+    exact Submodule.Quotient.norm_mk_le p (a + b)
+  linarith [IsUltrametricDist.norm_add_le_max a b, max_lt ha hb]
 
 -- ============================================================================
 -- Step 5: ε-orthogonal basis existence, general (Schneider Lemma 17.3)
@@ -124,7 +147,7 @@ theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
     ∃ (b : Module.Basis (Fin (Module.finrank 𝕜 E)) 𝕜 E), IsEpsOrthogonal ε b := by
   -- Factor through induction on the natural number `d = finrank 𝕜 E`,
   -- quantifying universally over the space to allow the IH to apply to quotients.
-  suffices h : ∀ (d : ℕ) (F : Type*) [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
+  suffices h : ∀ (d : ℕ) (F : Type _) [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
       [IsUltrametricDist F] [FiniteDimensional 𝕜 F],
       Module.finrank 𝕜 F = d →
       ∃ (b : Module.Basis (Fin d) 𝕜 F), IsEpsOrthogonal ε b by
@@ -157,11 +180,12 @@ lemma coord_tensor_eq {ιE ιF : Type*}
     (v : E) (w : F) (n : ℕ) (vs : Fin n → E) (ws : Fin n → F)
     (h : v ⊗ₜ[𝕜] w = ∑ j, vs j ⊗ₜ ws j) (i : ιE) (k : ιF) :
     bE.coord i v * bF.coord k w = ∑ j, bE.coord i (vs j) * bF.coord k (ws j) := by
-  set f := (LinearMap.mul' 𝕜 𝕜).compl₁₂ (bE.coord i) (bF.coord k)
+  set f := (LinearMap.lsmul 𝕜 𝕜).compl₁₂ (bE.coord i) (bF.coord k)
   have hf : ∀ (u : E) (t : F),
       TensorProduct.lift f (u ⊗ₜ[𝕜] t) = bE.coord i u * bF.coord k t := by
     intro u t
-    simp [TensorProduct.lift.tmul, LinearMap.compl₁₂_apply, LinearMap.mul'_apply]
+    simp only [TensorProduct.lift.tmul, f, LinearMap.compl₁₂_apply, LinearMap.lsmul_apply,
+      smul_eq_mul]
   have := congr_arg (TensorProduct.lift f) h
   simp only [map_sum, hf] at this
   exact this
@@ -280,15 +304,15 @@ theorem representation_cost_ge [IsUltrametricDist 𝕜] [IsUltrametricDist E]
     · simp [hw, Finset.sum_nonneg (fun j _ => mul_nonneg (norm_nonneg _) (norm_nonneg _))]
     replace hv : 0 < ‖v‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hv)
     replace hw : 0 < ‖w‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hw)
-    have hdE : 0 < Module.finrank 𝕜 E := Module.finrank_pos_of_exists_ne_zero
-      ⟨v, fun hv0 => by simp [hv0] at hv⟩
-    have hdF : 0 < Module.finrank 𝕜 F := Module.finrank_pos_of_exists_ne_zero
-      ⟨w, fun hw0 => by simp [hw0] at hw⟩
+    have hdE : 0 < Module.finrank 𝕜 E :=
+      Module.finrank_pos_iff_exists_ne_zero.mpr ⟨v, fun hv0 => by simp [hv0] at hv⟩
+    have hdF : 0 < Module.finrank 𝕜 F :=
+      Module.finrank_pos_iff_exists_ne_zero.mpr ⟨w, fun hw0 => by simp [hw0] at hw⟩
     haveI : Nonempty (Fin (Module.finrank 𝕜 E)) := ⟨⟨0, hdE⟩⟩
     haveI : Nonempty (Fin (Module.finrank 𝕜 F)) := ⟨⟨0, hdF⟩⟩
     -- ε-orthogonal bases
-    obtain ⟨bE, hbE⟩ := exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := E) hε
-    obtain ⟨bF, hbF⟩ := exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := F) hε
+    obtain ⟨bE, hbE⟩ := exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := E) ε hε
+    obtain ⟨bF, hbF⟩ := exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := F) ε hε
     -- Maximizing indices
     obtain ⟨i₀, hi₀, hi₀_bnd⟩ := exists_max_coord_index bE hbE v
     obtain ⟨k₀, hk₀, hk₀_bnd⟩ := exists_max_coord_index bF hbF w
@@ -311,10 +335,10 @@ theorem representation_cost_ge [IsUltrametricDist 𝕜] [IsUltrametricDist E]
         (Finset.mem_univ j₀)
     -- Chain inequalities
     have hc : (0 : ℝ) ≤ (1 + ε)⁻¹ := inv_nonneg.mpr (by linarith)
-    have hc1 : (1 + ε)⁻¹ ≤ 1 := by rw [inv_le_one_iff_of_pos (by linarith)]; linarith
+    have hc1 : (1 + ε)⁻¹ ≤ 1 := by rw [inv_le_one₀ (by linarith)]; linarith
     have hpow : (1 + ε)⁻¹ ^ 4 ≤ (1 + ε)⁻¹ ^ 2 :=
       pow_le_pow_of_le_one hc hc1 (by norm_num)
-    nlinarith [mul_le_mul hv_up hw_up hw.le hv_up.trans (le_refl _) |>.symm.le,
+    nlinarith [mul_le_mul hv_up hw_up hw.le (mul_nonneg (norm_nonneg _) (norm_nonneg _)),
                mul_le_mul_of_nonneg_left hj₀ (mul_nonneg (norm_nonneg (bE i₀)) (norm_nonneg (bF k₀))),
                sq_nonneg ((1 + ε)⁻¹),
                mul_nonneg (norm_nonneg v) (norm_nonneg w)]

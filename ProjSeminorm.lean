@@ -6,3 +6,4 @@ import ProjSeminorm.RCLike
 import ProjSeminorm.DirectApproach
 import ProjSeminorm.Counterexample
 import ProjSeminorm.CancellationTrick
+import ProjSeminorm.SchneiderReduction
