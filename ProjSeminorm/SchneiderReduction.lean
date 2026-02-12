@@ -148,16 +148,13 @@ so `|a*b| = |∑ aⱼbⱼ| ≤ maxⱼ |aⱼbⱼ| = maxⱼ |aⱼ|·|bⱼ|`.
 Since the field norm is multiplicative, `|a|·|b| = |a*b| ≤ maxⱼ |aⱼ|·|bⱼ|`. -/
 lemma exists_product_ge_of_sum_eq [IsUltrametricDist 𝕜]
     (a b : 𝕜) (n : ℕ) (as bs : Fin n → 𝕜)
-    (h : a * b = ∑ j, as j * bs j) :
+    (h : a * b = ∑ j, as j * bs j) (hn : 0 < n) :
     ∃ j, ‖as j‖ * ‖bs j‖ ≥ ‖a‖ * ‖b‖ := by
-  sorry
-  -- Proof sketch:
-  -- ‖a‖ * ‖b‖ = ‖a * b‖ (norm_mul)
-  --           = ‖∑ j, as j * bs j‖ (congr h)
-  --           ≤ maxⱼ ‖as j * bs j‖ (ultrametric on 𝕜)
-  --           = maxⱼ ‖as j‖ * ‖bs j‖ (norm_mul)
-  -- So the max is ≥ ‖a‖ * ‖b‖, hence ∃ j achieving it.
-  -- Use IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty on 𝕜.
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  have hne : (Finset.univ : Finset (Fin n)).Nonempty := Finset.univ_nonempty
+  obtain ⟨j, _, hj⟩ := IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty hne
+    (fun j => as j * bs j)
+  exact ⟨j, by simp only [norm_mul] at hj ⊢; linarith [norm_mul a b, congr_arg norm h]⟩
 
 -- ============================================================================
 -- Step 8: Single-term norm lower bound via ε-orthogonal coordinates
