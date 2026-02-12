@@ -122,13 +122,26 @@ Reference: Schneider, Lemma 17.3. -/
 theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
     [FiniteDimensional 𝕜 E] (ε : ℝ) (hε : 0 < ε) :
     ∃ (b : Module.Basis (Fin (Module.finrank 𝕜 E)) 𝕜 E), IsEpsOrthogonal ε b := by
-  sorry
-  -- Proof sketch (induction on finrank):
-  -- Base: finrank = 0 → Module.Basis.empty, vacuously true
-  -- Base: finrank = 1 → exists_epsOrthogonal_basis_one
-  -- Step: Pick v with ‖v‖ close to sup, project onto quotient by span {v},
-  --   get (n-1)-dim ε-orthogonal basis by IH, lift back.
-  --   The ultrametric property ensures the lifted basis remains ε-orthogonal.
+  -- Factor through induction on the natural number `d = finrank 𝕜 E`,
+  -- quantifying universally over the space to allow the IH to apply to quotients.
+  suffices h : ∀ (d : ℕ) (F : Type*) [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
+      [IsUltrametricDist F] [FiniteDimensional 𝕜 F],
+      Module.finrank 𝕜 F = d →
+      ∃ (b : Module.Basis (Fin d) 𝕜 F), IsEpsOrthogonal ε b by
+    exact h _ E rfl
+  intro d
+  induction d with
+  | zero =>
+    intro F _ _ _ _ hd
+    haveI : Module.Free 𝕜 F := Module.Free.of_divisionRing (K := 𝕜) (V := F)
+    refine ⟨Module.finBasisOfFinrankEq 𝕜 F hd, hε, fun c => ?_⟩
+    simp [Finset.univ_eq_empty]
+  | succ n ih =>
+    intro F _ _ _ _ hd
+    -- Inductive step: Pick nonzero v₀, quotient by span {v₀} (dimension n),
+    -- get ε-orthogonal basis of quotient by IH, lift back.
+    -- The ultrametric property ensures the lifted basis remains ε-orthogonal.
+    sorry
 
 -- ============================================================================
 -- Step 6: Coordinate extraction for tensor representations
