@@ -1453,9 +1453,46 @@ rather than analyzing T₁, T₂, T₃ independently.
   2. `projectiveSeminorm_tprod_ge_ultrametric` (line 383)
 
 **Next session should:**
-1. Prove ε-orthogonality of sumQuot basis (Sorry 1). Strategy: use quotient norm bound
-   `‖Quotient.mk x‖ ≤ ‖x‖` to transfer ε-orthogonality from bQ. The ultrametric isosceles
-   property handles the v₀ component. May need `sumQuot_inl`/`sumQuot_inr` API.
-   **Caveat**: `sumQuot` chooses its own lifts — may need to replace with manual construction
-   using carefully chosen near-minimal-norm lifts for proper ε-orthogonality bounds.
-2. Fill Sorry 2: ε→0 limit for projectiveSeminorm lower bound.
+1. `bd ready` — two parallel entry points: ProjSeminorm-ba7 (S1-setup) and ProjSeminorm-nnq (S2-bound)
+2. All 5 sub-issues have detailed descriptions — no re-research needed
+
+### Session 26 (2026-02-12): Research + issue decomposition for final 2 sorries
+
+**What was done:**
+- Deep analysis of both remaining sorries to identify exact blocking issues
+- **Sorry 1 diagnosis**: `Basis.sumQuot` gives UNCONTROLLED lifts — cannot relate `‖bQ j‖`
+  to `‖bF (j+1)‖`, so ε-orthogonality unprovable with current construction. MUST replace
+  with manual construction using `QuotientAddGroup.exists_norm_mk_lt` for near-optimal lifts.
+  Key math: set δ = √(1+ε) - 1 so (1+δ)² = 1+ε; use δ for IH + lift control.
+- **Sorry 2 diagnosis**: dualDistribL approach (mirrors WithBidual.lean) using ε-orthogonal
+  coordinate CLMs via `LinearMap.mkContinuous`. Then ε→0 via `le_of_forall_pos_lt_add` +
+  `one_add_mul_le_pow` (Bernoulli).
+- Handled degenerate case in sorry 2 (some ‖m i‖ = 0 → product = 0 ≤ seminorm)
+- Created beads epic ProjSeminorm-8dm with 5 sub-issues:
+  - **S1-setup** (ProjSeminorm-ba7): Replace sumQuot with controlled-lift construction
+  - **S1-basis** (ProjSeminorm-i6j): Prove linear independence + spanning → Basis.mk
+  - **S1-epsorth** (ProjSeminorm-9q2): Prove ε-orthogonality via quotient + ultrametric
+  - **S2-bound** (ProjSeminorm-nnq): CLM construction + dualDistribL calc chain
+  - **S2-limit** (ProjSeminorm-oyd): ε→0 via Bernoulli inequality
+- Dependencies: ba7 → i6j → 9q2 (sorry 1 chain), nnq → oyd (sorry 2 chain)
+- Both chains can proceed in parallel (sorry 2 uses sorry 1 via sorry-dependent proofs)
+- Build: 2341 jobs, 0 errors, 2 sorry warnings
+
+**Key API findings**:
+- `QuotientAddGroup.exists_norm_mk_lt`: gives lift with ‖lift‖ < ‖quotient_elt‖ + ε
+- `one_add_mul_le_pow`: Bernoulli inequality 1 + n*a ≤ (1+a)^n for a ≥ -2
+- `le_of_forall_pos_lt_add`: if ∀ ε > 0, a < b + ε, then a ≤ b
+- `LinearMap.mkContinuous` avoids CompleteSpace requirement (unlike toContinuousLinearMap)
+- `Real.sq_sqrt`: 0 ≤ x → √x ^ 2 = x
+
+**CRITICAL for sorry 1**: The `suffices` must quantify over BOTH d (dimension) AND ε,
+so the IH can be called with δ ≠ ε. Current code only quantifies over d with fixed ε.
+Refactor: `suffices h : ∀ d ε, 0 < ε → ∀ F [...], finrank F = d → ∃ b, IsEpsOrthogonal ε b`
+
+**Current state:**
+- 9 Lean files, ~900 LOC. SchneiderReduction.lean has 2 sorries (same as before)
+- All 5 sub-issues have detailed descriptions with exact API, code sketches, and caveats
+
+**Next session should:**
+1. `bd ready` — start with ProjSeminorm-ba7 (S1-setup) or ProjSeminorm-nnq (S2-bound)
+2. All descriptions are self-contained — no re-research needed

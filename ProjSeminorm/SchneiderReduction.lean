@@ -384,13 +384,21 @@ theorem projectiveSeminorm_tprod_ge_ultrametric
     [IsUltrametricDist 𝕜] [∀ i, IsUltrametricDist (E' i)]
     [∀ i, FiniteDimensional 𝕜 (E' i)] (m : Π i, E' i) :
     projectiveSeminorm (⨂ₜ[𝕜] i, m i) ≥ ∏ i, ‖m i‖ := by
-  sorry
-  -- Proof sketch:
-  -- For the binary case (ι = Fin 2): representation_cost_ge gives
-  --   ∀ ε > 0, ∀ repr, cost ≥ (1+ε)⁻⁴ * ‖v‖*‖w‖
-  -- So projectiveSeminorm ≥ (1+ε)⁻⁴ * ‖v‖*‖w‖ for all ε > 0.
-  -- Taking ε → 0: projectiveSeminorm ≥ ‖v‖*‖w‖.
-  -- General case: induction on Fintype.card ι using tensor associativity.
+  -- Edge case: some factor has norm 0
+  by_cases hm : ∃ i, ‖m i‖ = 0
+  · obtain ⟨i₀, hi₀⟩ := hm
+    rw [ge_iff_le, Finset.prod_eq_zero (Finset.mem_univ i₀) hi₀]
+    exact apply_nonneg _ _
+  · -- All factors have positive norm
+    push_neg at hm
+    -- Proof plan (dualDistribL approach, mirrors WithBidual.lean):
+    -- For each i and ε > 0, use ε-orthogonal basis to construct
+    -- a CLM gᵢ : E'(i) →L[𝕜] 𝕜 via LinearMap.mkContinuous on bᵢ.coord i₀.
+    -- The maximizer gives |gᵢ(mᵢ)|/‖gᵢ‖ ≥ ‖mᵢ‖/(1+ε).
+    -- Apply dualDistribL(⊗ gᵢ) + norm_dualDistribL_tprod_le to get:
+    --   projseminorm ≥ (1+ε)⁻ⁿ * ∏ ‖mᵢ‖
+    -- Take ε → 0 via le_of_forall_pos_lt_add + one_add_mul_le_pow (Bernoulli).
+    sorry
 
 /-- **Step 13**: The Cross Property for pi tensor products over ultrametric norms:
 `projectiveSeminorm (⨂ₜ i, m i) = ∏ i, ‖m i‖`.
