@@ -1422,3 +1422,40 @@ rather than analyzing T₁, T₂, T₃ independently.
    Need: pick nonzero v₀, quotient F/⟨v₀⟩, `FiniteDimensional.finiteDimensional_quotient`,
    `Submodule.finrank_quotient_add_finrank`, IH for basis, lift + combine with `Basis.mkFinCons`.
 2. Fill `projectiveSeminorm_tprod_ge_ultrametric` (ε→0 limit)
+
+### Session 25 (2026-02-12): Partial fill of exists_epsOrthogonal_basis inductive step
+
+**What was done:**
+- Partially filled the `succ n ih` case of `exists_epsOrthogonal_basis` (line 162-189):
+  - Pick nonzero v₀ via `Module.nontrivial_of_finrank_pos` + `exists_ne`
+  - Form W = 𝕜 ∙ v₀ with `finrank_span_singleton`
+  - Derive `finrank (F ⧸ W) = n` via `Submodule.finrank_quotient_add_finrank`
+  - Apply `isUltrametricDist_quotient W` for ultrametric on quotient
+  - Apply IH to get ε-orthogonal basis `bQ` of quotient
+  - Construct basis of F via `Module.Basis.sumQuot` + `reindex (finSumFinEquiv.trans (finCongr ...))`
+- Remaining sorry is now the ε-orthogonality proof for the combined basis:
+  `⊢ ‖∑ i, c i • bF i‖ ≥ (1+ε)⁻¹ * ⨆ i, ‖c i‖ * ‖bF i‖`
+  where bF = (bW.sumQuot bQ).reindex ...
+  Key approach: quotient norm ≤ original norm + ε-orthogonality of bQ in quotient
+  + ultrametric isosceles property. See Schneider Lemma 17.3 case analysis.
+- Build verified: 2341 jobs, 0 errors, 2 sorry warnings (same count, sorry 1 now more specific)
+
+**Parallelism analysis:**
+- Both sorries are in same file → no parallel editing
+- `representation_cost_ge` (binary TensorProduct) doesn't directly apply to
+  `projectiveSeminorm` (PiTensorProduct) — bridging the types is non-trivial
+- Sorry 2 (ε→0 limit) needs: either reprove for PiTensorProduct directly, or
+  establish PiTensorProduct ≅ TensorProduct equivalence preserving projective seminorm
+
+**Current state:**
+- 9 Lean files, ~900 LOC. SchneiderReduction.lean still has 2 sorries:
+  1. `exists_epsOrthogonal_basis` succ case: ε-orthogonality of sumQuot basis (line 189)
+  2. `projectiveSeminorm_tprod_ge_ultrametric` (line 383)
+
+**Next session should:**
+1. Prove ε-orthogonality of sumQuot basis (Sorry 1). Strategy: use quotient norm bound
+   `‖Quotient.mk x‖ ≤ ‖x‖` to transfer ε-orthogonality from bQ. The ultrametric isosceles
+   property handles the v₀ component. May need `sumQuot_inl`/`sumQuot_inr` API.
+   **Caveat**: `sumQuot` chooses its own lifts — may need to replace with manual construction
+   using carefully chosen near-minimal-norm lifts for proper ε-orthogonality bounds.
+2. Fill Sorry 2: ε→0 limit for projectiveSeminorm lower bound.

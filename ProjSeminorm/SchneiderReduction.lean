@@ -161,9 +161,31 @@ theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
     simp [Finset.univ_eq_empty]
   | succ n ih =>
     intro F _ _ _ _ hd
-    -- Inductive step: Pick nonzero v₀, quotient by span {v₀} (dimension n),
-    -- get ε-orthogonal basis of quotient by IH, lift back.
-    -- The ultrametric property ensures the lifted basis remains ε-orthogonal.
+    -- E is nontrivial (finrank > 0)
+    have hpos : 0 < Module.finrank 𝕜 F := by omega
+    haveI : Nontrivial F := Module.nontrivial_of_finrank_pos hpos
+    -- Pick nonzero v₀
+    obtain ⟨v₀, hv₀⟩ := exists_ne (0 : F)
+    -- Form submodule W = span {v₀}
+    set W : Submodule 𝕜 F := 𝕜 ∙ v₀ with hW_def
+    -- W has finrank 1
+    have hW1 : Module.finrank 𝕜 W = 1 := finrank_span_singleton hv₀
+    -- Quotient has finrank n
+    have hQn : Module.finrank 𝕜 (F ⧸ W) = n := by
+      have := Submodule.finrank_quotient_add_finrank W; omega
+    -- Quotient is ultrametric
+    haveI : IsUltrametricDist (F ⧸ W) := isUltrametricDist_quotient W
+    -- Apply IH to get ε-orthogonal basis of quotient
+    obtain ⟨bQ, hbQ⟩ := ih (F ⧸ W) hQn
+    -- Get a basis of W (1-dimensional)
+    set bW := Module.finBasisOfFinrankEq 𝕜 W hW1
+    -- Combine into basis of F via sumQuot, then reindex Fin 1 ⊕ Fin n ≃ Fin (n+1)
+    set bF := (bW.sumQuot bQ).reindex (finSumFinEquiv.trans (finCongr (Nat.add_comm 1 n)))
+    refine ⟨bF, hε, fun c => ?_⟩
+    -- Need: ‖∑ i, c i • bF i‖ ≥ (1+ε)⁻¹ * ⨆ i, ‖c i‖ * ‖bF i‖
+    -- The quotient map sends ∑ c i • bF i to the "quotient part" of the sum.
+    -- By ε-orthogonality of bQ in the quotient and the ultrametric property,
+    -- the combined basis is ε-orthogonal. (See Schneider, Lemma 17.3)
     sorry
 
 -- ============================================================================
