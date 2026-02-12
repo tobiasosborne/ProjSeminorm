@@ -1246,7 +1246,33 @@ rather than analyzing T₁, T₂, T₃ independently.
 
 **Next session should:**
 1. Read `references/schneider_md/` Ch. 17 to verify Lemma 17.3 / Prop 17.4 statements
-2. Start filling sorries — easiest first: `exists_product_ge_of_sum_eq` (Step 7),
-   `norm_ge_coord_mul_norm` (Step 8), `single_term_cost_bound` (Step 9)
+2. Start filling sorries — easiest first: `norm_ge_coord_mul_norm` (Step 8),
+   `single_term_cost_bound` (Step 9), `exists_max_coord_index` (Step 10)
 3. The hardest sorry is `exists_epsOrthogonal_basis` (Step 5, ~20-30 LOC when filled)
-4. Check if Perez-Garcia PDF conversion completed
+
+### Session 21 (2026-02-12): Git history purge + exists_product_ge_of_sum_eq proved
+
+**What was done:**
+- Purged `references/` from entire git history (copyrighted PDFs + markdown conversions)
+  - `git filter-branch --index-filter` to rewrite all 48 commits
+  - `git gc --prune=now --aggressive` to remove old objects
+  - Force pushed to remote
+  - Added `/references/` to `.gitignore`
+- Regenerated both markdown conversions locally via `marker_single` from `~/Projects/archivum/.venv/`:
+  - Schneider: `references/schneider_md/978-3-662-04728-6/978-3-662-04728-6.md` (~11 min)
+  - Perez-Garcia: `references/perezgarcia_md/...md` (~31 min)
+- Proved `exists_product_ge_of_sum_eq` in SchneiderReduction.lean (ultrametric domination lemma):
+  - Added `(hn : 0 < n)` hypothesis (lemma is unprovable for empty `Fin 0`)
+  - Proof: `Nonempty (Fin n)` → `Finset.univ_nonempty` → `IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty` → witness + `norm_mul`
+- Build: 2334 jobs, 0 errors, 9 sorry warnings (down from 10)
+
+**Current state:**
+- 9 Lean files, ~770 LOC. SchneiderReduction.lean has 9 sorries remaining.
+- `references/` exists locally (PDFs + regenerated markdowns) but is gitignored
+- Git history is clean — no copyrighted material in any commit
+
+**Next session should:**
+1. Read `references/schneider_md/` Ch. 17 to verify Lemma 17.3 / Prop 17.4 statements
+2. Fill sorries — next easiest: `norm_ge_coord_mul_norm` (Step 8), `single_term_cost_bound` (Step 9), `exists_max_coord_index` (Step 10)
+3. The hardest sorry is `exists_epsOrthogonal_basis` (Step 5, ~20-30 LOC when filled)
+4. `marker_single` lives in `~/Projects/archivum/.venv/bin/marker_single` (uses `--output_dir` flag)
