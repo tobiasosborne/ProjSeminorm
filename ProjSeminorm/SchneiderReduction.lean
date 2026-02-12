@@ -8,6 +8,7 @@ import Mathlib.Topology.MetricSpace.Ultra.Basic
 import Mathlib.Analysis.Normed.Group.Ultra
 import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.LinearAlgebra.Dimension.Finrank
+import Mathlib.Data.Fintype.Order
 
 /-!
 # Schneider Reduction: Cross Property for Ultrametric Norms
@@ -60,10 +61,16 @@ Iterating gives `‖∑ xᵢ‖ ≤ maxᵢ ‖xᵢ‖`, and `‖c • b‖ = ‖
 lemma norm_sum_le_iSup_mul_norm {ι : Type*} [Fintype ι] [IsUltrametricDist E]
     (b : Module.Basis ι 𝕜 E) (c : ι → 𝕜) :
     ‖∑ i, c i • b i‖ ≤ ⨆ i, ‖c i‖ * ‖b i‖ := by
-  sorry
-  -- Proof sketch: Use IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty
-  -- to get ‖∑ i, c i • b i‖ ≤ ‖c i₀ • b i₀‖ for some i₀,
-  -- then norm_smul gives ‖c i₀‖ * ‖b i₀‖ ≤ ⨆ i, ‖c i‖ * ‖b i‖
+  by_cases hι : IsEmpty ι
+  · simp
+  · haveI : Nonempty ι := not_isEmpty_iff.mp hι
+    have hne : (Finset.univ : Finset ι).Nonempty := Finset.univ_nonempty
+    obtain ⟨i₀, _, hi₀⟩ :=
+      IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty hne (fun i => c i • b i)
+    calc ‖∑ i, c i • b i‖ ≤ ‖c i₀ • b i₀‖ := hi₀
+      _ = ‖c i₀‖ * ‖b i₀‖ := norm_smul _ _
+      _ ≤ ⨆ i, ‖c i‖ * ‖b i‖ :=
+        le_ciSup (Finite.bddAbove_range (fun i => ‖c i‖ * ‖b i‖)) i₀
 
 -- ============================================================================
 -- Step 3: Define ε-orthogonal basis
@@ -169,11 +176,16 @@ lemma norm_ge_coord_mul_norm {ι : Type*} [Fintype ι]
     {ε : ℝ} (bE : Module.Basis ι 𝕜 E) (hb : IsEpsOrthogonal ε bE)
     (v : E) (i : ι) :
     ‖v‖ ≥ (1 + ε)⁻¹ * (‖bE.coord i v‖ * ‖bE i‖) := by
-  sorry
-  -- Proof sketch: Write v = ∑ cᵢ eᵢ where cᵢ = bE.coord i v.
-  -- By IsEpsOrthogonal: ‖v‖ ≥ (1+ε)⁻¹ * (⨆ i, ‖cᵢ‖ * ‖eᵢ‖)
-  -- The sup is ≥ the i-th term: ⨆ i, ... ≥ ‖cᵢ‖ * ‖eᵢ‖
-  -- Chain: ‖v‖ ≥ (1+ε)⁻¹ * sup ≥ (1+ε)⁻¹ * ‖cᵢ‖ * ‖eᵢ‖
+  have h_sum : ‖v‖ ≥ (1 + ε)⁻¹ * ⨆ j, ‖(bE.coord j) v‖ * ‖bE j‖ := by
+    have h := hb.2 (fun j => bE.repr v j)
+    rw [bE.sum_repr v] at h
+    convert h using 2
+  have h_le : ‖(bE.coord i) v‖ * ‖bE i‖ ≤ ⨆ j, ‖(bE.coord j) v‖ * ‖bE j‖ :=
+    le_ciSup (Finite.bddAbove_range (fun j => ‖(bE.coord j) v‖ * ‖bE j‖)) i
+  calc ‖v‖ ≥ (1 + ε)⁻¹ * ⨆ j, ‖(bE.coord j) v‖ * ‖bE j‖ := h_sum
+    _ ≥ (1 + ε)⁻¹ * (‖(bE.coord i) v‖ * ‖bE i‖) := by
+        gcongr
+        exact inv_nonneg.mpr (by linarith [hb.1])
 
 -- ============================================================================
 -- Step 9: Product lower bound for one term
@@ -190,11 +202,14 @@ lemma single_term_cost_bound {ιE ιF : Type*} [Fintype ιE] [Fintype ιF]
     (j₀ : Fin n) (i₀ : ιE) (k₀ : ιF) :
     ‖vs j₀‖ * ‖ws j₀‖ ≥ (1 + ε)⁻¹ ^ 2 *
       ((‖bE.coord i₀ (vs j₀)‖ * ‖bE i₀‖) * (‖bF.coord k₀ (ws j₀)‖ * ‖bF k₀‖)) := by
-  sorry
-  -- Proof sketch: Multiply the two bounds from norm_ge_coord_mul_norm:
-  -- ‖vs j₀‖ ≥ (1+ε)⁻¹ * (‖bE.coord i₀ (vs j₀)‖ * ‖bE i₀‖)
-  -- ‖ws j₀‖ ≥ (1+ε)⁻¹ * (‖bF.coord k₀ (ws j₀)‖ * ‖bF k₀‖)
-  -- Multiply: ‖vs j₀‖ * ‖ws j₀‖ ≥ (1+ε)⁻² * (product of coord terms)
+  have h1 := norm_ge_coord_mul_norm bE hbE (vs j₀) i₀
+  have h2 := norm_ge_coord_mul_norm bF hbF (ws j₀) k₀
+  have h_inv_nn : (0 : ℝ) ≤ (1 + ε)⁻¹ := inv_nonneg.mpr (by linarith [hbE.1])
+  have h_A_nn : (0 : ℝ) ≤ ‖(bE.coord i₀) (vs j₀)‖ * ‖bE i₀‖ :=
+    mul_nonneg (norm_nonneg _) (norm_nonneg _)
+  have h_B_nn : (0 : ℝ) ≤ ‖(bF.coord k₀) (ws j₀)‖ * ‖bF k₀‖ :=
+    mul_nonneg (norm_nonneg _) (norm_nonneg _)
+  nlinarith [mul_nonneg h_inv_nn h_A_nn, mul_nonneg h_inv_nn h_B_nn]
 
 -- ============================================================================
 -- Step 10: Maximizing coordinate index
@@ -206,11 +221,8 @@ lemma exists_max_coord_index {ι : Type*} [Fintype ι] [Nonempty ι]
     {ε : ℝ} (bE : Module.Basis ι 𝕜 E) (hbE : IsEpsOrthogonal ε bE) (v : E) :
     ∃ i₀, (∀ i, ‖bE.coord i v‖ * ‖bE i‖ ≤ ‖bE.coord i₀ v‖ * ‖bE i₀‖) ∧
       (1 + ε)⁻¹ * (‖bE.coord i₀ v‖ * ‖bE i₀‖) ≤ ‖v‖ := by
-  sorry
-  -- Proof sketch: The finite set {‖bE.coord i v‖ * ‖bE i‖ : i} has a maximum
-  -- by Finset.exists_max_image. Call it i₀.
-  -- Then ⨆ i, ... = ‖bE.coord i₀ v‖ * ‖bE i₀‖ (it's the max).
-  -- The ε-orthogonal bound gives (1+ε)⁻¹ * max ≤ ‖v‖.
+  obtain ⟨i₀, hi₀⟩ := Finite.exists_max (fun i => ‖(bE.coord i) v‖ * ‖bE i‖)
+  exact ⟨i₀, hi₀, (norm_ge_coord_mul_norm bE hbE v i₀).le⟩
 
 -- ============================================================================
 -- Step 11: Representation cost lower bound (KEY ASSEMBLY)

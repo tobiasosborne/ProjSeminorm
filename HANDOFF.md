@@ -1273,6 +1273,45 @@ rather than analyzing T₁, T₂, T₃ independently.
 
 **Next session should:**
 1. Read `references/schneider_md/` Ch. 17 to verify Lemma 17.3 / Prop 17.4 statements
-2. Fill sorries — next easiest: `norm_ge_coord_mul_norm` (Step 8), `single_term_cost_bound` (Step 9), `exists_max_coord_index` (Step 10)
+2. Fill sorries — next easiest: `exists_epsOrthogonal_basis_one` (dim 1 base case), `coord_tensor_eq` (bilinear functional on tensors)
 3. The hardest sorry is `exists_epsOrthogonal_basis` (Step 5, ~20-30 LOC when filled)
 4. `marker_single` lives in `~/Projects/archivum/.venv/bin/marker_single` (uses `--output_dir` flag)
+
+### Session 22 (2026-02-12): 4 SchneiderReduction sorries filled (9→5)
+
+**What was done:**
+- Filled 4 sorries in `SchneiderReduction.lean`, all sorry-free:
+  1. `norm_sum_le_iSup_mul_norm` (Step 2): Ultrametric norm bound for basis expansions.
+     Case split on `IsEmpty ι`; nonempty case uses `IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty`
+     + `norm_smul` + `le_ciSup`.
+  2. `norm_ge_coord_mul_norm` (Step 8): Single-coordinate lower bound from ε-orthogonal bases.
+     Apply `hb.2` with `bE.repr v` as coefficients, `convert ... using 2` to handle `coord`/`repr`
+     syntactic mismatch, then `gcongr` + `le_ciSup`.
+  3. `single_term_cost_bound` (Step 9): Product of two `norm_ge_coord_mul_norm` bounds.
+     `nlinarith` with nonnegativity witnesses.
+  4. `exists_max_coord_index` (Step 10): Maximizing index via `Finite.exists_max`.
+- Added `import Mathlib.Data.Fintype.Order` (needed for `Finite.bddAbove_range`)
+- Build: 2334 jobs, 0 errors, 5 sorry warnings (down from 9)
+
+**Key API learnings:**
+- `bE.coord j v = bE.repr v j` by `rfl`, but syntactic mismatch blocks `rw`; use `convert ... using 2`
+- `Finite.bddAbove_range` requires `import Mathlib.Data.Fintype.Order`
+- `le_ciSup` needs explicit function: `le_ciSup (Finite.bddAbove_range (fun j => ...)) i`
+- `Finite.exists_max` gives maximizer over any `[Finite α] [Nonempty α] [LinearOrder β]`
+- `IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty` needs `Finset.Nonempty`, not `Nonempty ι`
+- `mul_le_mul'` needs `MulLeftMono` which ℝ doesn't synthesize; use `nlinarith` instead
+
+**Current state:**
+- 9 Lean files, ~770 LOC. SchneiderReduction.lean has 5 sorries remaining:
+  - `exists_epsOrthogonal_basis_one` (dim 1 base case)
+  - `exists_epsOrthogonal_basis` (general, hardest — induction on finrank)
+  - `coord_tensor_eq` (coordinate extraction via bilinear functional)
+  - `representation_cost_ge` (key assembly — depends on above 3)
+  - `projectiveSeminorm_tprod_ge_ultrametric` (ε→0 limit — depends on assembly)
+
+**Next session should:**
+1. Fill `exists_epsOrthogonal_basis_one` (dim 1 base case, should be straightforward)
+2. Fill `coord_tensor_eq` (apply bilinear functional to tensor equation)
+3. Attempt `exists_epsOrthogonal_basis` (induction on finrank, ~20-30 LOC)
+4. Once those 3 are done, `representation_cost_ge` assembles them
+5. Then `projectiveSeminorm_tprod_ge_ultrametric` takes ε→0
