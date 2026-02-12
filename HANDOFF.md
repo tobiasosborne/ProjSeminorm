@@ -1496,3 +1496,59 @@ Refactor: `suffices h : ∀ d ε, 0 < ε → ∀ F [...], finrank F = d → ∃ 
 **Next session should:**
 1. `bd ready` — start with ProjSeminorm-ba7 (S1-setup) or ProjSeminorm-nnq (S2-bound)
 2. All descriptions are self-contained — no re-research needed
+
+---
+
+## Key Strategic Insight: The Path to Unconditional CP
+
+### What Session 15 Claimed (and Session 16 Broke)
+
+Session 15 proposed: Quotient + Cancellation Trick reduces CP to FDNP (one open lemma).
+Session 16 found FDNP is FALSE over ℂ_p. The chain broke.
+
+Sessions 16-17 then pivoted to the 3-term inequality / adversarial proof tree, which got
+stuck at the equality-case obstruction.
+
+### What Was Missed: The Approximate Version Is Circular
+
+The approximate FDNP (find H with `dist(w, H) ≥ (1-δ)‖w‖` then take δ→0) is equivalent
+to `‖inclusionInDoubleDual(w)‖ = ‖w‖`, which IS `h_bidual`. So the entire Quotient +
+Cancellation approach, even in approximate form, is equivalent to the hypothesis we're
+trying to remove. This was not recognized at the time.
+
+### The Real Question (Not Yet Attacked)
+
+The Schneider reduction uses THREE ingredients:
+1. **ε-orthogonal bases** — exists because the SPACE is ultrametric
+2. **Coordinate extraction** — pure algebra (bilinear functionals on tensors)
+3. **Ultrametric domination** — `a*b = ∑ a_j*b_j` in NA field ⟹ `max |a_j|·|b_j| ≥ |a|·|b|`
+
+Points 2-3 use the ultrametric property of the FIELD (always true for NA fields), NOT the
+space. Only point 1 requires the space to be ultrametric.
+
+**The key question for unconditional CP**: Can ε-orthogonal bases be replaced with a
+weaker notion that exists for ALL finite-dimensional norms over NA fields? The domination
+lemma and coordinate extraction don't care about ε-orthogonality per se — they need
+coordinates with controlled norms. Specifically:
+
+> For a non-ultrametric norm N on k^d (k = NA field), does there exist a basis {e_i}
+> and a function δ(ε) → 0 as ε → 0 such that:
+>   ‖∑ c_i e_i‖ ≥ δ(ε) · max_i |c_i| · ‖e_i‖
+> for all coefficient tuples?
+
+If δ(ε) can be made arbitrarily close to 1 (i.e., δ(ε) → 1), the Schneider machinery
+gives CP. If δ(ε) is bounded away from 1, it gives a weaker bound but might still suffice
+when combined with the cancellation trick.
+
+This is the structural question that the adversarial tree / 3-term inequality approach
+sidestepped. It's tracked as a P0 beads issue.
+
+### Relationship to Existing Work
+
+- **Schneider reduction** (2 sorries): proves CP for ultrametric norms via ε-orthogonal bases
+- **Cancellation trick** (sorry-free): proves CP for rank-1 representations
+- **dualDistribL** (sorry-free): provides the continuous duality machinery
+- **WithBidual** (sorry-free): proves CP given h_bidual
+
+The unconditional proof would combine Schneider's machinery (points 2-3) with a
+generalized basis existence result (replacing point 1) to eliminate h_bidual entirely.
