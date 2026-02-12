@@ -1552,3 +1552,18 @@ sidestepped. It's tracked as a P0 beads issue.
 
 The unconditional proof would combine Schneider's machinery (points 2-3) with a
 generalized basis existence result (replacing point 1) to eliminate h_bidual entirely.
+
+Auerbach bases (determinant-maximizing bases with ‖e_i‖ = ‖e_i*‖ = 1) DO exist over any complete valued field in finite dimensions — the construction only uses compactness + Cramer's rule, no Hahn-Banach. So "generalized
+  ε-orthogonal bases" exist.
+
+  But the Schneider proof uses TWO properties of ε-orthogonal bases:
+  - Lower bound: ‖v‖ ≥ (1+ε)⁻¹ · max |coord_i(v)| · ‖e_i‖ — Auerbach gives this with factor 1. Fine.
+  - Upper bound: ‖v‖ ≤ max |coord_i(v)| · ‖e_i‖ — this IS the ultrametric inequality on the space. Fails for non-ultrametric norms. Auerbach only gives ‖v‖ ≤ n · max |coord_i(v)| (triangle inequality, factor of dimension).
+
+  The upper bound is what lets the Schneider proof say "the maximizing coordinate captures the full norm." Without it, coordinates leak norm into the non-maximal terms, and the cost bound degrades by a factor of n² that
+  can't be sent to 1.
+
+  Worse: I realized while thinking this through that FDNP and h_bidual are the same condition (both say: exists f with ‖f‖ = 1 and |f(v)| = ‖v‖). So the Session 16 FDNP counterexample over ℂ_p IS a proof that h_bidual fails
+   in finite dimensions over ℂ_p. Every approach that routes through coordinates or duality hits this wall.
+
+  If CP is true unconditionally, the proof must be non-dual — it cannot go through evaluation of functionals on tensor representations. That's a fundamentally different kind of argument, and I don't see one.
