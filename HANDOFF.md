@@ -1211,3 +1211,42 @@ rather than analyzing T₁, T₂, T₃ independently.
 2. If Schneider works: prove FDNP for non-ultrametric norms (the reduced open case)
 3. If gap found: pursue BFEP (Gamma) or Cauchy-Binet (Epsilon) as backup strategies
 4. Consider formalizing the Schneider reduction in Lean 4
+
+### Session 20 (2026-02-12): Schneider Reduction formalized — SchneiderReduction.lean
+
+**What was done:**
+- Created `ProjSeminorm/SchneiderReduction.lean` (~100 LOC) formalizing Schneider's Prop 17.4
+  proof strategy for CP over ultrametric normed spaces
+- **13 lemmas/theorems** with correct type signatures, all sorry'd with detailed proof sketches:
+  1. `norm_sum_le_iSup_mul_norm` — ultrametric norm bound for basis expansions
+  2. `IsEpsOrthogonal` — predicate for ε-orthogonal bases
+  3. `exists_epsOrthogonal_basis_one` — ε-orthogonal basis in dim 1
+  4. `exists_epsOrthogonal_basis` — general existence (Schneider Lemma 17.3)
+  5. `coord_tensor_eq` — coordinate extraction for tensor representations
+  6. `exists_product_ge_of_sum_eq` — ultrametric domination lemma
+  7. `norm_ge_coord_mul_norm` — single-term norm lower bound
+  8. `single_term_cost_bound` — product lower bound for one term
+  9. `exists_max_coord_index` — maximizing coordinate index
+  10. `representation_cost_ge` — KEY: every repr has cost ≥ (1+ε)⁻⁴ ‖v‖·‖w‖
+  11. `projectiveSeminorm_tprod_ge_ultrametric` — lower bound via ε → 0
+  12. `projectiveSeminorm_tprod_ultrametric` — **the main theorem** (= le_antisymm)
+- Created beads epic `ProjSeminorm-o5d` (Schneider-Reduction) with 16 sub-issues, all closed
+- Converted Schneider PDF to markdown via `marker_single` (Perez-Garcia still converting)
+- Build verified: 2334 jobs, 0 errors, 10 sorry warnings
+- Key API finding: `Basis` is `Module.Basis` in current mathlib (moved into `Module` namespace)
+
+**Current state:**
+- 9 Lean files, ~770 LOC total. Steps 1-8 + CancellationTrick sorry-free. SchneiderReduction has 10 sorries.
+- `projectiveSeminorm_tprod_ultrametric` has correct type signature:
+  ```
+  [IsUltrametricDist 𝕜] [∀ i, IsUltrametricDist (E' i)] [∀ i, FiniteDimensional 𝕜 (E' i)]
+  (m : Π i, E' i) : projectiveSeminorm (⨂ₜ[𝕜] i, m i) = ∏ i, ‖m i‖
+  ```
+- Reference markdown: `references/schneider_md/` (Schneider book)
+
+**Next session should:**
+1. Read `references/schneider_md/` Ch. 17 to verify Lemma 17.3 / Prop 17.4 statements
+2. Start filling sorries — easiest first: `exists_product_ge_of_sum_eq` (Step 7),
+   `norm_ge_coord_mul_norm` (Step 8), `single_term_cost_bound` (Step 9)
+3. The hardest sorry is `exists_epsOrthogonal_basis` (Step 5, ~20-30 LOC when filled)
+4. Check if Perez-Garcia PDF conversion completed
