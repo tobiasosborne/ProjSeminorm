@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Tobias Osborne
 -/
 import ProjSeminorm.Basic
+import ProjSeminorm.CancellationTrick
 import Mathlib.Topology.MetricSpace.Ultra.Basic
 import Mathlib.Analysis.Normed.Group.Ultra
 import Mathlib.LinearAlgebra.Basis.VectorSpace
@@ -96,11 +97,16 @@ The single-term sum has `‖c • e‖ = |c| · ‖e‖`, which equals the supre
 lemma exists_epsOrthogonal_basis_one [IsUltrametricDist E]
     (hE : Module.finrank 𝕜 E = 1) (ε : ℝ) (hε : 0 < ε) :
     ∃ b : Module.Basis (Fin 1) 𝕜 E, IsEpsOrthogonal ε b := by
-  sorry
-  -- Proof sketch: Any basis of a 1-dim space works.
-  -- For a single element sum: ‖c 0 • b 0‖ = ‖c 0‖ * ‖b 0‖ (by norm_smul)
-  -- and ⨆ i, ... = ‖c 0‖ * ‖b 0‖ (single index), so the bound holds
-  -- with equality (≥ (1+ε)⁻¹ * ... is immediate since (1+ε)⁻¹ < 1).
+  haveI : FiniteDimensional 𝕜 E := Module.finite_of_finrank_eq_succ hE
+  haveI : Module.Free 𝕜 E := Module.Free.of_divisionRing
+  set b := Module.finBasisOfFinrankEq 𝕜 E hE
+  refine ⟨b, hε, fun c => ?_⟩
+  simp only [Fin.sum_univ_one, norm_smul, ciSup_unique, Fin.default_eq_zero]
+  have h1 : (0 : ℝ) ≤ ‖c 0‖ * ‖b 0‖ := mul_nonneg (norm_nonneg _) (norm_nonneg _)
+  have h2 : (1 + ε)⁻¹ ≤ 1 := by
+    rw [inv_le_one_iff_of_pos (by linarith)]
+    linarith
+  linarith [mul_le_of_le_one_left h1 h2]
 
 -- ============================================================================
 -- Step 5: ε-orthogonal basis existence, general (Schneider Lemma 17.3)
@@ -138,10 +144,14 @@ lemma coord_tensor_eq {ιE ιF : Type*}
     (v : E) (w : F) (n : ℕ) (vs : Fin n → E) (ws : Fin n → F)
     (h : v ⊗ₜ[𝕜] w = ∑ j, vs j ⊗ₜ ws j) (i : ιE) (k : ιF) :
     bE.coord i v * bF.coord k w = ∑ j, bE.coord i (vs j) * bF.coord k (ws j) := by
-  sorry
-  -- Proof sketch: Use TensorProduct.lift on the bilinear map
-  -- (u, t) ↦ bE.coord i u * bF.coord k t.
-  -- Applying to both sides of h and using linearity gives the result.
+  set f := (LinearMap.mul' 𝕜 𝕜).compl₁₂ (bE.coord i) (bF.coord k)
+  have hf : ∀ (u : E) (t : F),
+      TensorProduct.lift f (u ⊗ₜ[𝕜] t) = bE.coord i u * bF.coord k t := by
+    intro u t
+    simp [TensorProduct.lift.tmul, LinearMap.compl₁₂_apply, LinearMap.mul'_apply]
+  have := congr_arg (TensorProduct.lift f) h
+  simp only [map_sum, hf] at this
+  exact this
 
 -- ============================================================================
 -- Step 7: Ultrametric domination lemma
@@ -243,17 +253,58 @@ theorem representation_cost_ge [IsUltrametricDist 𝕜] [IsUltrametricDist E]
     (v : E) (w : F) (n : ℕ) (vs : Fin n → E) (ws : Fin n → F)
     (h : v ⊗ₜ[𝕜] w = ∑ j, vs j ⊗ₜ ws j) (ε : ℝ) (hε : 0 < ε) :
     ∑ j, ‖vs j‖ * ‖ws j‖ ≥ (1 + ε)⁻¹ ^ 4 * (‖v‖ * ‖w‖) := by
-  sorry
-  -- Proof sketch:
-  -- 1. obtain ⟨bE, hbE⟩ := exists_epsOrthogonal_basis hε  -- ε-orthogonal basis for E
-  -- 2. obtain ⟨bF, hbF⟩ := exists_epsOrthogonal_basis hε  -- ε-orthogonal basis for F
-  -- 3. obtain ⟨i₀, hi₀_max, hi₀_bound⟩ := exists_max_coord_index bE hbE v
-  -- 4. obtain ⟨k₀, hk₀_max, hk₀_bound⟩ := exists_max_coord_index bF hbF w
-  -- 5. From coord_tensor_eq: bE.coord i₀ v * bF.coord k₀ w = ∑ j, ...
-  -- 6. From exists_product_ge_of_sum_eq: ∃ j₀, ‖...j₀‖ * ‖...j₀‖ ≥ ‖...v‖ * ‖...w‖
-  -- 7. From single_term_cost_bound: ‖vs j₀‖ * ‖ws j₀‖ ≥ (1+ε)⁻² * (coord terms)
-  -- 8. From hi₀_bound, hk₀_bound: coord terms relate to ‖v‖ * ‖w‖
-  -- 9. Chain: ∑ ‖vⱼ‖·‖wⱼ‖ ≥ ‖vs j₀‖·‖ws j₀‖ ≥ (1+ε)⁻⁴ · ‖v‖·‖w‖
+  -- Edge case: n = 0
+  by_cases hn : n = 0
+  · subst hn
+    simp only [Finset.univ_eq_empty, Finset.sum_empty] at h ⊢
+    have := tmul_eq_zero_of_field h
+    rcases this with rfl | rfl <;> simp
+  · -- Main case: n > 0
+    replace hn : 0 < n := Nat.pos_of_ne_zero hn
+    by_cases hv : ‖v‖ = 0
+    · simp [hv, Finset.sum_nonneg (fun j _ => mul_nonneg (norm_nonneg _) (norm_nonneg _))]
+    by_cases hw : ‖w‖ = 0
+    · simp [hw, Finset.sum_nonneg (fun j _ => mul_nonneg (norm_nonneg _) (norm_nonneg _))]
+    replace hv : 0 < ‖v‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hv)
+    replace hw : 0 < ‖w‖ := lt_of_le_of_ne (norm_nonneg _) (Ne.symm hw)
+    have hdE : 0 < Module.finrank 𝕜 E := Module.finrank_pos_of_exists_ne_zero
+      ⟨v, fun hv0 => by simp [hv0] at hv⟩
+    have hdF : 0 < Module.finrank 𝕜 F := Module.finrank_pos_of_exists_ne_zero
+      ⟨w, fun hw0 => by simp [hw0] at hw⟩
+    haveI : Nonempty (Fin (Module.finrank 𝕜 E)) := ⟨⟨0, hdE⟩⟩
+    haveI : Nonempty (Fin (Module.finrank 𝕜 F)) := ⟨⟨0, hdF⟩⟩
+    -- ε-orthogonal bases
+    obtain ⟨bE, hbE⟩ := exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := E) hε
+    obtain ⟨bF, hbF⟩ := exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := F) hε
+    -- Maximizing indices
+    obtain ⟨i₀, hi₀, hi₀_bnd⟩ := exists_max_coord_index bE hbE v
+    obtain ⟨k₀, hk₀, hk₀_bnd⟩ := exists_max_coord_index bF hbF w
+    -- Coordinate identity + ultrametric domination
+    have hcoord := coord_tensor_eq bE bF v w n vs ws h i₀ k₀
+    obtain ⟨j₀, hj₀⟩ := exists_product_ge_of_sum_eq (bE.coord i₀ v) (bF.coord k₀ w) n
+      (fun j => bE.coord i₀ (vs j)) (fun j => bF.coord k₀ (ws j)) hcoord hn
+    -- Single term bound
+    have hst := single_term_cost_bound bE bF hbE hbF vs ws j₀ i₀ k₀
+    -- Ultrametric upper bounds on ‖v‖, ‖w‖
+    have hv_up : ‖v‖ ≤ ‖bE.coord i₀ v‖ * ‖bE i₀‖ := by
+      conv_lhs => rw [← bE.sum_repr v]
+      exact (norm_sum_le_iSup_mul_norm bE _).trans (ciSup_le (fun i => hi₀ i))
+    have hw_up : ‖w‖ ≤ ‖bF.coord k₀ w‖ * ‖bF k₀‖ := by
+      conv_lhs => rw [← bF.sum_repr w]
+      exact (norm_sum_le_iSup_mul_norm bF _).trans (ciSup_le (fun i => hk₀ i))
+    -- Sum ≥ single term
+    have hsum : ∑ j, ‖vs j‖ * ‖ws j‖ ≥ ‖vs j₀‖ * ‖ws j₀‖ :=
+      Finset.single_le_sum (fun j _ => mul_nonneg (norm_nonneg _) (norm_nonneg _))
+        (Finset.mem_univ j₀)
+    -- Chain inequalities
+    have hc : (0 : ℝ) ≤ (1 + ε)⁻¹ := inv_nonneg.mpr (by linarith)
+    have hc1 : (1 + ε)⁻¹ ≤ 1 := by rw [inv_le_one_iff_of_pos (by linarith)]; linarith
+    have hpow : (1 + ε)⁻¹ ^ 4 ≤ (1 + ε)⁻¹ ^ 2 :=
+      pow_le_pow_of_le_one hc hc1 (by norm_num)
+    nlinarith [mul_le_mul hv_up hw_up hw.le hv_up.trans (le_refl _) |>.symm.le,
+               mul_le_mul_of_nonneg_left hj₀ (mul_nonneg (norm_nonneg (bE i₀)) (norm_nonneg (bF k₀))),
+               sq_nonneg ((1 + ε)⁻¹),
+               mul_nonneg (norm_nonneg v) (norm_nonneg w)]
 
 -- ============================================================================
 -- Steps 12-13: Taking ε → 0 and the Cross Property

@@ -1315,3 +1315,42 @@ rather than analyzing T₁, T₂, T₃ independently.
 3. Attempt `exists_epsOrthogonal_basis` (induction on finrank, ~20-30 LOC)
 4. Once those 3 are done, `representation_cost_ge` assembles them
 5. Then `projectiveSeminorm_tprod_ge_ultrametric` takes ε→0
+
+### Session 23 (2026-02-12): 3 more SchneiderReduction sorries filled (5→2)
+
+**What was done:**
+- Filled 3 sorries in `SchneiderReduction.lean`:
+  1. `exists_epsOrthogonal_basis_one` (Step 4): Dim 1 base case.
+     `Module.finBasisOfFinrankEq` for basis, `Fin.sum_univ_one` + `ciSup_unique` to simplify,
+     `inv_le_one_iff_of_pos` + `mul_le_of_le_one_left` to close `(1+ε)⁻¹ * x ≤ x`.
+  2. `coord_tensor_eq` (Step 6): Coordinate extraction via bilinear functional.
+     Lift `(LinearMap.mul' 𝕜 𝕜).compl₁₂ (bE.coord i) (bF.coord k)` through `TensorProduct.lift`,
+     then `congr_arg` + `map_sum` + `simp`.
+  3. `representation_cost_ge` (Step 11): Key assembly of all helper lemmas.
+     Edge cases (`n = 0` via `tmul_eq_zero_of_field`, `‖v‖ = 0` or `‖w‖ = 0`).
+     Main case: ε-orthogonal bases → maximizers → coord identity → ultrametric domination
+     → single term bound → ultrametric upper bounds (`norm_sum_le_iSup_mul_norm` + `ciSup_le`)
+     → `nlinarith` with `mul_le_mul`, `mul_le_mul_of_nonneg_left`, `pow_le_pow_of_le_one`.
+- Added `import ProjSeminorm.CancellationTrick` (for `tmul_eq_zero_of_field` in n=0 case)
+- Build: 2334 jobs, 0 errors, 2 sorry warnings (down from 5)
+
+**Key API learnings:**
+- `Module.finBasisOfFinrankEq` needs `FiniteDimensional` + `Module.Free` instances manually via `haveI`
+- `ciSup_unique` simplifies `⨆ i : Fin 1, f i` to `f default`; combine with `Fin.default_eq_zero`
+- `(LinearMap.mul' 𝕜 𝕜).compl₁₂ f g` constructs the bilinear map `(u, t) ↦ f u * g t`
+- `TensorProduct.lift.tmul` evaluates the lifted map on pure tensors
+- `Module.finrank_pos_of_exists_ne_zero` derives positive dimension from a nonzero element
+- `pow_le_pow_of_le_one` gives `(1+ε)⁻¹ ^ 4 ≤ (1+ε)⁻¹ ^ 2` for the conservative bound
+
+**Current state:**
+- 9 Lean files, ~840 LOC. SchneiderReduction.lean has 2 sorries remaining:
+  - `exists_epsOrthogonal_basis` (Schneider Lemma 17.3, induction on finrank — hardest sorry)
+  - `projectiveSeminorm_tprod_ge_ultrametric` (ε→0 limit for PiTensorProduct)
+
+**Next session should:**
+1. Fill `exists_epsOrthogonal_basis` — induction on finrank. Key steps:
+   - Base: finrank 0 → empty basis, vacuous. finrank 1 → `exists_epsOrthogonal_basis_one`.
+   - Inductive step: pick near-optimal v, quotient by `span {v}`, recurse, lift back.
+   - Need: `Submodule.Quotient`, `Module.finrank_quotient_add_finrank`, lifting basis elements.
+2. Fill `projectiveSeminorm_tprod_ge_ultrametric` — generalize binary case to PiTensorProduct.
+   May need tensor associativity or direct argument via `projectiveSeminorm_apply` + `iInf`.
