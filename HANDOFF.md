@@ -1182,3 +1182,32 @@ rather than analyzing T₁, T₂, T₃ independently.
 1. Attack the equality-case obstruction (node 1.4.3.2)
 2. Or: attempt numerical counterexample search with proper ℂ_p chains
 3. Or: share report with David Gross for feedback
+
+### Session 19 (2026-02-12): Five proof strategy reports generated
+
+**What was done:**
+- Spawned 5 parallel Opus subagents to generate independent proof strategies for Conjecture 6.1 (the hard-core equality-case obstruction)
+- Each agent wrote a detailed report in `reports/`:
+  - `alpha_tropical.md` (34KB) — Tropical/valuative geometry: tropicalize C on Berkovich tree, exit index stratification, balancing condition
+  - `beta_operator.md` (45KB) — Operator algebra: **key negative result** — systematically proves ALL linear-functional approaches reduce to FDNP
+  - `gamma_convex.md` (60KB) — Convex duality: BFEP (Bilinear Form Existence Problem) — 4 DOF vs 2 DOF gap; verifies Monna-Springer bipolar theorem fails over ℂ_p
+  - `delta_padic.md` (54KB) — p-adic ball geometry: **Schneider Reduction** — π_sum ≥ π_max = ‖v‖·‖w‖ for all ultrametric norms (Schneider Prop 17.4), reducing open case to non-ultrametric norms
+  - `epsilon_algebraic.md` (61KB) — Algebraic/combinatorial: Cauchy-Binet positivity certificate, skeleton decomposition C-1 = (skeleton ≥ 0) + perturbation
+
+**Key findings across reports:**
+1. **Schneider Reduction** (Delta, 55-70% feasibility): CP holds for ALL ultrametric seminormed spaces over ANY NA field. The remaining open case is FDNP for non-ultrametric norms.
+2. **All linear approaches → FDNP** (Beta): Every linear functional strategy (operator norm, trace, CP maps, Stinespring, Haagerup, Grothendieck) reduces to FDNP which fails over ℂ_p.
+3. **BFEP** (Gamma, 35-45%): Bilinear forms have 4 DOF on k²×k² vs 2 DOF for product functionals — may bypass FDNP.
+4. **Cauchy-Binet certificate** (Epsilon, 35%): Express C-1 as sum of non-negative terms using 2×2 minor structure.
+5. **Tropical balancing** (Alpha, 25-35%): Geometric picture but key balancing claim unproven.
+
+**Current state:**
+- 5 detailed strategy reports in `reports/` (~254KB total)
+- All Lean code remains sorry-free
+- 3-term CP inequality remains open
+
+**Next session should:**
+1. **Verify Schneider Reduction**: Check Schneider Prop 17.4 applies to projective (not just maximal) tensor seminorm — if π_sum ≥ π_max is rigorous, CP is proved for all ultrametric norms
+2. If Schneider works: prove FDNP for non-ultrametric norms (the reduced open case)
+3. If gap found: pursue BFEP (Gamma) or Cauchy-Binet (Epsilon) as backup strategies
+4. Consider formalizing the Schneider reduction in Lean 4
