@@ -1354,3 +1354,43 @@ rather than analyzing T₁, T₂, T₃ independently.
    - Need: `Submodule.Quotient`, `Module.finrank_quotient_add_finrank`, lifting basis elements.
 2. Fill `projectiveSeminorm_tprod_ge_ultrametric` — generalize binary case to PiTensorProduct.
    May need tensor associativity or direct argument via `projectiveSeminorm_apply` + `iInf`.
+
+### Session 24 (2026-02-12): Induction skeleton for exists_epsOrthogonal_basis
+
+**What was done:**
+- Restructured `exists_epsOrthogonal_basis` from bare sorry into proper induction on finrank
+- Uses `suffices` to factor through a helper quantifying universally over all spaces of
+  dimension d (enabling IH to apply to quotient spaces)
+- Base case (d=0): fully proved — empty basis, `simp [Finset.univ_eq_empty]`
+- Inductive step (d=n+1): sorry'd with clear comment about what's needed
+- Build verified: 2334 jobs, 0 errors, 2 sorry warnings (unchanged count)
+- Investigated approach for `projectiveSeminorm_tprod_ge_ultrametric`:
+  - Duality approach via `dualDistribL` with coordinate CLMs (mirrors WithBidual.lean)
+  - Use `LinearMap.mkContinuous` (not `toContinuousLinearMap`) to avoid `CompleteSpace 𝕜`
+  - Bound: `‖coord_{i₀}(v)‖ ≤ ((1+ε)/‖b(i₀)‖) * ‖v‖` from ε-orthogonal property
+  - Chain: `∏|g_i(m_i)| ≤ ∏‖g_i‖ * projseminorm` via `dualDistribL` + `norm_dualDistribL_tprod_le`
+  - Ratio bound: `|g_i(m_i)|/‖g_i‖ ≥ ‖m_i‖/(1+ε)`, giving `projseminorm ≥ (1+ε)^{-|ι|} * ∏‖m_i‖`
+  - Take ε → 0
+
+**Key API findings:**
+- `LinearMap.mkContinuous` avoids `CompleteSpace 𝕜` requirement (unlike `toContinuousLinearMap`)
+- `LinearMap.mkContinuous_norm_le` gives `‖f.mkContinuous C h‖ ≤ C` when `0 ≤ C`
+- `LinearMap.mkContinuous_apply` gives `(f.mkContinuous C h) x = f x`
+- `FiniteDimensional` needs `import Mathlib.Analysis.Normed.Module.FiniteDimension`
+- `Module.Free.of_divisionRing` needs explicit `(K := 𝕜) (V := E)` in universally-quantified context
+
+**Current state:**
+- 9 Lean files, ~850 LOC. SchneiderReduction.lean has 2 sorries remaining:
+  - `exists_epsOrthogonal_basis` inductive step (d=n+1): quotient + lift + ε-orthogonality
+  - `projectiveSeminorm_tprod_ge_ultrametric`: duality approach fully planned, needs implementation
+
+**Next session should:**
+1. Fill `exists_epsOrthogonal_basis` inductive step:
+   - Pick nonzero v₀ ∈ E, form quotient Q = E/⟨v₀⟩ (finrank = n)
+   - Need `Submodule.Quotient.seminormedAddCommGroup`, `Submodule.Quotient.normedSpace`
+   - Need ultrametric quotient (prove via `isUltrametricDist_of_isNonarchimedean_norm`)
+   - IH gives ε-orthogonal basis of Q, lift back, combine with v₀
+2. Fill `projectiveSeminorm_tprod_ge_ultrametric`:
+   - Use `LinearMap.mkContinuous` for coordinate CLMs (no `CompleteSpace` needed)
+   - Chain via `dualDistribL` as in WithBidual.lean
+   - ε→0 limit via `le_of_forall_lt` or direct contradiction
