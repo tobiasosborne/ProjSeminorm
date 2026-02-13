@@ -176,18 +176,61 @@ theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
       have := Submodule.finrank_quotient_add_finrank W; omega
     -- Quotient is ultrametric
     haveI : IsUltrametricDist (F ⧸ W) := isUltrametricDist_quotient W
-    -- Apply IH to get ε'-orthogonal basis of quotient
-    -- (Later: call with δ = √(1+ε')-1 instead of ε' for tighter control)
-    obtain ⟨bQ, hbQ⟩ := ih ε' hε' (F ⧸ W) hQn
+    -- Set δ = ε'/(2+ε') > 0; key property: (1+δ)² ≤ 1+ε'
+    set δ := ε' / (2 + ε') with hδ_def
+    have hδ : 0 < δ := div_pos hε' (by linarith)
+    -- Apply IH with δ to get δ-orthogonal basis of quotient
+    obtain ⟨bQ, hbQ⟩ := ih δ hδ (F ⧸ W) hQn
     -- Get a basis of W (1-dimensional)
     set bW := Module.finBasisOfFinrankEq 𝕜 W hW1
-    -- Combine into basis of F via sumQuot, then reindex Fin 1 ⊕ Fin n ≃ Fin (n+1)
-    set bF := (bW.sumQuot bQ).reindex (finSumFinEquiv.trans (finCongr (Nat.add_comm 1 n)))
+    -- Choose near-optimal lifts via quotient norm infimum approximation
+    -- For each j, get eⱼ with π(eⱼ) = bQ j and ‖eⱼ‖ < ‖bQ j‖ + δ
+    have hπQ := NormedAddGroupHom.isQuotientQuotient W.toAddSubgroup
+    have hlift : ∀ j : Fin n, ∃ e : F,
+        W.toAddSubgroup.normedMk e = (bQ j : F ⧸ W) ∧
+        ‖e‖ < ‖(bQ j : F ⧸ W)‖ + δ :=
+      fun j => hπQ.norm_lift hδ (bQ j)
+    choose e_lift he_mk he_bound using hlift
+    -- Define the combined family: 0 ↦ (bW 0 : F), j+1 ↦ e_lift j
+    set b_fun : Fin (n + 1) → F := Fin.cons (↑(bW 0) : F) e_lift
+    -- Construct basis from linear independence + spanning
+    -- Relate normedMk to mkQ for linear algebra reasoning
+    have hπ_eq : ∀ x : F, (W.toAddSubgroup.normedMk x : F ⧸ W) = Submodule.mkQ W x := fun _ => rfl
+    -- The lifts compose with mkQ to give bQ (linearly independent)
+    have he_mkQ : ∀ j : Fin n, Submodule.mkQ W (e_lift j) = bQ j :=
+      fun j => (hπ_eq (e_lift j)).symm ▸ he_mk j
+    have h_li : LinearIndependent 𝕜 b_fun := by
+      rw [linearIndependent_fin_cons]
+      refine ⟨?_, ?_⟩
+      · -- e_lift is LI because mkQ ∘ e_lift = bQ is LI
+        exact LinearIndependent.of_comp (Submodule.mkQ W) (by
+          rw [show Submodule.mkQ W ∘ e_lift = (bQ : Fin n → F ⧸ W) from funext he_mkQ]
+          exact bQ.linearIndependent)
+      · -- ↑(bW 0) ∉ span(e_lift): extract sum rep, apply mkQ, use LI of bQ
+        intro hmem
+        obtain ⟨c, hc⟩ := (Submodule.mem_span_range_iff_exists_fun 𝕜).mp hmem
+        -- hc : ∑ j, c j • e_lift j = ↑(bW 0)
+        -- Apply mkQ W: ∑ c j • bQ j = mkQ(↑(bW 0)) = 0
+        have hbW0_mem : (↑(bW 0) : F) ∈ W := (bW 0).property
+        have hq : ∑ j : Fin n, c j • (bQ j : F ⧸ W) = 0 := by
+          have h := congr_arg (Submodule.mkQ W) hc
+          simp only [map_sum, map_smul, he_mkQ] at h
+          rwa [Submodule.mkQ_apply, (Submodule.Quotient.mk_eq_zero W).mpr hbW0_mem] at h
+        -- By LI of bQ: c j = 0 for all j
+        have hc0 : ∀ j, c j = 0 :=
+          (Fintype.linearIndependent_iff.mp bQ.linearIndependent) c hq
+        -- So ↑(bW 0) = 0, contradicting basis nonzero
+        simp only [hc0, zero_smul, Finset.sum_const_zero] at hc
+        exact Subtype.coe_injective.ne (bW.ne_zero 0) hc.symm
+    have h_span : ⊤ ≤ Submodule.span 𝕜 (Set.range b_fun) :=
+      (h_li.span_eq_top_of_card_eq_finrank' (by simp [hd])).ge
+    set bF := Module.Basis.mk h_li h_span
     refine ⟨bF, hε', fun c => ?_⟩
-    -- Need: ‖∑ i, c i • bF i‖ ≥ (1+ε')⁻¹ * ⨆ i, ‖c i‖ * ‖bF i‖
-    -- The quotient map sends ∑ c i • bF i to the "quotient part" of the sum.
-    -- By ε-orthogonality of bQ in the quotient and the ultrametric property,
-    -- the combined basis is ε-orthogonal. (See Schneider, Lemma 17.3)
+    -- ε'-orthogonality via Schneider's argument (Lemma 17.3):
+    -- (1) ‖x‖ ≥ ‖π(x)‖ ≥ (1+δ)⁻¹ max_{i≥1} |c i|‖bQ i‖
+    --     ≥ (1+δ)⁻² max_{i≥1} |c i|‖bF i‖     (lift control)
+    -- (2) |c 0|‖bF 0‖ ≤ max(‖x‖, max_{i≥1} |c i|‖bF i‖) ≤ (1+δ)²‖x‖  (ultrametric)
+    -- Combined with (1+δ)² ≤ 1+ε': ‖x‖ ≥ (1+ε')⁻¹ ⨆ i, ‖c i‖ * ‖bF i‖
     sorry
 
 -- ============================================================================

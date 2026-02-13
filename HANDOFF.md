@@ -1602,3 +1602,42 @@ Three incremental steps toward eliminating the 2 remaining sorries in SchneiderR
 **Next session should**:
 1. Sorry 1: Implement δ = √(1+ε')-1 and controlled lifts (ProjSeminorm-ba7)
 2. Sorry 2: CLM construction via `LinearMap.mkContinuous` on basis coords (ProjSeminorm-nnq)
+
+### Session 23 (2026-02-13): S1-setup + S1-basis complete — 1 sorry remains
+
+**What was done:**
+- **Replaced broken `Basis.sumQuot` with controlled-lift construction** (ProjSeminorm-ba7):
+  - Set δ = ε'/(2+ε') > 0 (avoids sqrt import; satisfies (1+δ)² ≤ 1+ε' by elementary algebra)
+  - Call IH with δ (not ε') to get δ-orthogonal basis bQ of F ⧸ W
+  - Use `NormedAddGroupHom.IsQuotient.norm_lift` for near-optimal lifts:
+    `∀ j, ∃ e_lift j, normedMk(e_lift j) = bQ j ∧ ‖e_lift j‖ < ‖bQ j‖ + δ`
+  - Define combined family: `b_fun = Fin.cons (↑(bW 0)) e_lift`
+
+- **Proved linear independence** (ProjSeminorm-i6j):
+  - Used `linearIndependent_fin_cons` splitting into `e_lift` LI + `↑(bW 0) ∉ span(e_lift)`
+  - `e_lift` LI: `LinearIndependent.of_comp (mkQ W)` since `mkQ ∘ e_lift = bQ` (basis)
+  - Not-in-span: extract sum rep via `mem_span_range_iff_exists_fun`, apply mkQ to get
+    `∑ cⱼ • bQ j = 0`, LI of bQ forces cⱼ = 0, so ↑(bW 0) = 0, contradicting basis nonzero
+
+- **Proved spanning** by dimension counting:
+  `h_li.span_eq_top_of_card_eq_finrank'` (n+1 LI vectors in finrank n+1 space)
+
+- **Closed**: ProjSeminorm-ba7 (S1-setup), ProjSeminorm-i6j (S1-basis)
+
+**Build**: 2341 jobs, 0 errors, 1 sorry (down from 3 intermediate sorries back to 1)
+
+**Current state**:
+- SchneiderReduction.lean line 234: ε-orthogonality of combined basis (ProjSeminorm-9q2)
+  Goal: `‖∑ c i • bF i‖ ≥ (1+ε')⁻¹ * ⨆ i, ‖c i‖ * ‖bF i‖`
+  Proof sketch (Schneider Lemma 17.3):
+  1. ‖x‖ ≥ ‖π(x)‖ ≥ (1+δ)⁻¹ ⨆_j ‖c(j+1)‖‖bQ j‖  (quotient norm + δ-orthogonality)
+  2. For i=0: |c₀|‖bF₀‖ ≤ (1+δ)²‖x‖  (ultrametric + lift bound chain)
+  3. For i≥1: need multiplicative lift bound ‖e_lift j‖ ≤ (1+δ)‖bQ j‖
+     **Issue**: current lift is additive (‖e_lift j‖ < ‖bQ j‖ + δ), not multiplicative.
+     Fix: use `norm_lift (mul_pos hδ (norm_pos ...))` with ε = δ·‖bQ j‖ when ‖bQ j‖ > 0.
+     In seminormed case, ‖bQ j‖ = 0 needs separate handling.
+
+**Next session should**:
+1. Change lift to multiplicative bound: `‖e_lift j‖ < (1+δ)·‖bQ j‖` (requires ‖bQ j‖ > 0)
+2. Prove ε-orthogonality (ProjSeminorm-9q2) using Schneider's argument
+3. Consider whether to add `NormedAddCommGroup` hypothesis for clean ‖bQ j‖ > 0
