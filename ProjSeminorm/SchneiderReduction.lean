@@ -5,6 +5,7 @@ Authors: Tobias Osborne
 -/
 import ProjSeminorm.Basic
 import ProjSeminorm.CancellationTrick
+import ProjSeminorm.DualDistribL
 import Mathlib.Topology.MetricSpace.Ultra.Basic
 import Mathlib.Analysis.Normed.Group.Ultra
 import Mathlib.LinearAlgebra.Basis.VectorSpace
@@ -573,7 +574,103 @@ theorem projectiveSeminorm_tprod_ge_ultrametric
         linarith
     intro ε hε
     -- S2-bound: per-ε bound using ε-orthogonal bases + dualDistribL
-    sorry
+    -- Setup: positive norms, positive dimensions
+    have hm_ne : ∀ i, m i ≠ 0 := fun i hi => hm i (by simp [hi])
+    have hdim : ∀ i, 0 < Module.finrank 𝕜 (E' i) :=
+      fun i => Module.finrank_pos_iff_exists_ne_zero.mpr ⟨m i, hm_ne i⟩
+    haveI : ∀ i, Nonempty (Fin (Module.finrank 𝕜 (E' i))) := fun i => ⟨⟨0, hdim i⟩⟩
+    -- ε-orthogonal bases + maximizing indices
+    choose b hb using fun i => exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := E' i) ε hε
+    choose idx hidx hidx_bnd using fun i => exists_max_coord_index (b i) (hb i) (m i)
+    -- Ultrametric upper bounds: ‖m i‖ ≤ coord(idx) * basis(idx)
+    have hm_up : ∀ i, ‖m i‖ ≤ ‖(b i).coord (idx i) (m i)‖ * ‖(b i) (idx i)‖ := by
+      intro i; conv_lhs => rw [← (b i).sum_repr (m i)]
+      exact (norm_sum_le_iSup_mul_norm (b i) _).trans (ciSup_le (hidx i))
+    -- Basis vectors at maximizing indices have positive norm
+    have hbi_pos : ∀ i, (0 : ℝ) < ‖(b i) (idx i)‖ := by
+      intro i
+      rcases eq_or_lt_of_le (norm_nonneg ((b i) (idx i))) with h0 | h0
+      · exfalso
+        have h1 := hm_up i; rw [← h0, mul_zero] at h1
+        exact hm i (le_antisymm h1 (norm_nonneg _))
+      · exact h0
+    -- Coord bound: ‖coord v‖ ≤ (1+ε)/‖basis‖ * ‖v‖
+    have hcoord_bnd : ∀ i (v : E' i),
+        ‖(b i).coord (idx i) v‖ ≤ (1 + ε) / ‖(b i) (idx i)‖ * ‖v‖ := by
+      intro i v
+      rw [div_mul_eq_mul_div, le_div_iff₀ (hbi_pos i)]
+      -- Goal: ‖coord v‖ * ‖basis‖ ≤ (1+ε) * ‖v‖
+      have h1 := (norm_ge_coord_mul_norm (b i) (hb i) v (idx i)).le
+      -- h1 : (1 + ε)⁻¹ * (‖coord v‖ * ‖basis‖) ≤ ‖v‖
+      have h1e : (0 : ℝ) < 1 + ε := by linarith
+      calc ‖(b i).coord (idx i) v‖ * ‖(b i) (idx i)‖
+          = 1 * (‖(b i).coord (idx i) v‖ * ‖(b i) (idx i)‖) := (one_mul _).symm
+        _ = (1 + ε) * (1 + ε)⁻¹ * (‖(b i).coord (idx i) v‖ * ‖(b i) (idx i)‖) := by
+            rw [mul_inv_cancel₀ (ne_of_gt h1e)]
+        _ = (1 + ε) * ((1 + ε)⁻¹ * (‖(b i).coord (idx i) v‖ * ‖(b i) (idx i)‖)) := by ring
+        _ ≤ (1 + ε) * ‖v‖ := by gcongr
+    -- Construct CLMs: g i = coord (idx i) made continuous
+    set g : Π i, (E' i) →L[𝕜] 𝕜 := fun i =>
+      ((b i).coord (idx i)).mkContinuous ((1 + ε) / ‖(b i) (idx i)‖) (hcoord_bnd i)
+    -- g i applies as coord
+    have hg_apply : ∀ i (v : E' i), g i v = (b i).coord (idx i) v := by
+      intro i v; simp [g, LinearMap.mkContinuous_apply]
+    -- ‖g i‖ ≤ (1+ε)/‖basis‖
+    have hg_norm : ∀ i, ‖g i‖ ≤ (1 + ε) / ‖(b i) (idx i)‖ := by
+      intro i; exact LinearMap.mkContinuous_norm_le _ (div_nonneg (by linarith) (norm_nonneg _)) _
+    -- g i has positive norm (since g i (m i) ≠ 0)
+    have hg_pos : ∀ i, (0 : ℝ) < ‖g i‖ := by
+      intro i
+      by_contra hle; push_neg at hle
+      have h0 : ‖g i‖ = 0 := le_antisymm hle (norm_nonneg _)
+      have h1 : ∀ x, g i x = 0 := fun x => by
+        have := (g i).le_opNorm x; rw [h0, zero_mul] at this
+        exact norm_eq_zero.mp (le_antisymm this (norm_nonneg _))
+      have h2 := h1 (m i); rw [hg_apply] at h2
+      have h3 := hm_up i; rw [h2, norm_zero, zero_mul] at h3
+      exact hm i (le_antisymm h3 (norm_nonneg _))
+    have hprod_g_pos : (0 : ℝ) < ∏ i, ‖g i‖ :=
+      Finset.prod_pos (fun i _ => hg_pos i)
+    -- Duality calc chain (mirrors WithBidual.lean)
+    have hcalc : ∏ i, ‖g i (m i)‖ ≤ (∏ i, ‖g i‖) * projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+      calc ∏ i, ‖g i (m i)‖
+          = ‖∏ i, g i (m i)‖ := (norm_prod Finset.univ _).symm
+        _ = ‖dualDistribL (⨂ₜ[𝕜] i, g i) (⨂ₜ[𝕜] i, m i)‖ := by
+            rw [dualDistribL_tprod_apply]
+        _ ≤ ‖dualDistribL (⨂ₜ[𝕜] i, g i)‖ * ‖(⨂ₜ[𝕜] i, m i)‖ :=
+            (dualDistribL (⨂ₜ[𝕜] i, g i)).le_opNorm _
+        _ ≤ ‖dualDistribL (⨂ₜ[𝕜] i, g i)‖ * projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+            gcongr; exact injectiveSeminorm_le_projectiveSeminorm _
+        _ ≤ (∏ i, ‖g i‖) * projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+            gcongr; exact norm_dualDistribL_tprod_le _
+    -- Ratio bound: ‖g i (m i)‖ / ‖g i‖ ≥ ‖m i‖ * (1+ε)⁻¹
+    have hratio : ∀ i, ‖m i‖ * (1 + ε)⁻¹ ≤ ‖g i (m i)‖ / ‖g i‖ := by
+      intro i
+      rw [hg_apply, le_div_iff₀ (hg_pos i)]
+      calc ‖m i‖ * (1 + ε)⁻¹ * ‖g i‖
+          ≤ ‖m i‖ * (1 + ε)⁻¹ * ((1 + ε) / ‖(b i) (idx i)‖) := by
+            gcongr; exact hg_norm i
+        _ = ‖m i‖ / ‖(b i) (idx i)‖ := by
+            field_simp
+        _ ≤ ‖(b i).coord (idx i) (m i)‖ := by
+            rw [div_le_iff₀ (hbi_pos i)]; exact hm_up i
+    -- Product of ratios ≥ (1+ε)⁻ⁿ * ∏ ‖m i‖
+    have hprod_ratio : (1 + ε)⁻¹ ^ Fintype.card ι * ∏ i, ‖m i‖ ≤
+        ∏ i, (‖g i (m i)‖ / ‖g i‖) := by
+      have heq : ∏ i : ι, ((1 + ε)⁻¹ * ‖m i‖) =
+          (1 + ε)⁻¹ ^ Fintype.card ι * ∏ i, ‖m i‖ := by
+        simp [Finset.prod_mul_distrib, Finset.prod_const, Finset.card_univ]
+      rw [← heq]
+      exact Finset.prod_le_prod
+        (fun i _ => mul_nonneg (by positivity) (norm_nonneg _))
+        (fun i _ => by rw [mul_comm]; exact hratio i)
+    -- From hcalc: ∏ (ratio) ≤ projectiveSeminorm
+    have hprod_le_proj : ∏ i, (‖g i (m i)‖ / ‖g i‖) ≤
+        projectiveSeminorm (⨂ₜ[𝕜] i, m i) := by
+      rw [Finset.prod_div_distrib, div_le_iff₀ hprod_g_pos]
+      rw [mul_comm] at hcalc
+      exact hcalc
+    linarith
 
 /-- **Step 13**: The Cross Property for pi tensor products over ultrametric norms:
 `projectiveSeminorm (⨂ₜ i, m i) = ∏ i, ‖m i‖`.
