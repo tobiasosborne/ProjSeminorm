@@ -423,6 +423,101 @@ lemma exists_prod_norm_ge_of_sum_eq [IsUltrametricDist 𝕜]
     _ ≤ ‖∏ i, as j i‖ := hj
     _ = ∏ i, ‖as j i‖ := norm_prod Finset.univ (as j)
 
+/-- In a pi tensor product over a field, the pure tensor of nonzero vectors is nonzero.
+Uses the dual pairing: if `g_i(m_i) = 1` for each `i`, then
+`dualDistrib(⨂ g_i)(⨂ m_i) = ∏ g_i(m_i) = 1 ≠ 0`. -/
+lemma tprod_ne_zero (m : Π i, E' i) (hm : ∀ i, m i ≠ 0) :
+    (⨂ₜ[𝕜] i, m i) ≠ 0 := by
+  intro h0
+  choose g hg using fun i => exists_dual_eq_one 𝕜 (hm i)
+  have h1 := PiTensorProduct.dualDistrib_apply (R := 𝕜) (M := E') g m
+  rw [h0, map_zero] at h1
+  simp [hg] at h1
+
+/-- **Multi-factor representation cost bound**: Every representation
+`⨂ₜ i, m i = ∑_j ⨂ₜ i, ms j i` in ultrametric spaces satisfies
+  `∑_j ∏_i ‖ms j i‖ ≥ (1+ε)⁻ⁿ · ∏_i ‖m i‖`.
+
+The proof uses ε-orthogonal bases for each factor, coordinate extraction via
+`dualDistrib`, and ultrametric domination to find a single term with large
+product norm. -/
+theorem representation_cost_ge_pi [IsUltrametricDist 𝕜] [∀ i, IsUltrametricDist (E' i)]
+    [∀ i, FiniteDimensional 𝕜 (E' i)]
+    (m : Π i, E' i) (n : ℕ) (ms : Fin n → Π i, E' i)
+    (h : (⨂ₜ[𝕜] i, m i) = ∑ j : Fin n, (⨂ₜ[𝕜] i, ms j i))
+    (ε : ℝ) (hε : 0 < ε) :
+    ∑ j, ∏ i, ‖ms j i‖ ≥ (1 + ε)⁻¹ ^ Fintype.card ι * ∏ i, ‖m i‖ := by
+  -- Edge case: some factor has norm 0 → product is 0
+  by_cases hm : ∃ i, ‖m i‖ = 0
+  · obtain ⟨i₀, hi₀⟩ := hm
+    rw [ge_iff_le, Finset.prod_eq_zero (Finset.mem_univ i₀) hi₀, mul_zero]
+    exact Finset.sum_nonneg (fun j _ => Finset.prod_nonneg (fun i _ => norm_nonneg _))
+  push_neg at hm
+  -- Edge case: n = 0 contradicts ⨂ₜ m_i ≠ 0
+  by_cases hn : n = 0
+  · subst hn; exfalso; simp only [Finset.univ_eq_empty, Finset.sum_empty] at h
+    exact tprod_ne_zero m (fun i hi => hm i (by simp [hi])) h
+  replace hn : 0 < n := Nat.pos_of_ne_zero hn
+  -- Setup: positive norms, positive dimensions
+  have hm_ne : ∀ i, m i ≠ 0 := fun i hi => hm i (by simp [hi])
+  have hdim : ∀ i, 0 < Module.finrank 𝕜 (E' i) := fun i =>
+    Module.finrank_pos_iff_exists_ne_zero.mpr ⟨m i, hm_ne i⟩
+  haveI : ∀ i, Nonempty (Fin (Module.finrank 𝕜 (E' i))) := fun i => ⟨⟨0, hdim i⟩⟩
+  -- ε-orthogonal bases for each factor
+  choose b hb using fun i => exists_epsOrthogonal_basis (𝕜 := 𝕜) (E := E' i) ε hε
+  -- Maximizing coordinate indices
+  choose idx hidx hidx_bnd using fun i => exists_max_coord_index (b i) (hb i) (m i)
+  -- Coordinate extraction + ultrametric domination
+  have hcoord := coord_piTensor_eq b m n ms h idx
+  obtain ⟨j₀, hj₀⟩ := exists_prod_norm_ge_of_sum_eq
+    (fun i => (b i).coord (idx i) (m i)) n
+    (fun j i => (b i).coord (idx i) (ms j i)) hcoord hn
+  -- Per-factor ε-orthogonal bounds
+  have hfactor : ∀ i, ‖ms j₀ i‖ ≥
+      (1 + ε)⁻¹ * (‖(b i).coord (idx i) (ms j₀ i)‖ * ‖(b i) (idx i)‖) :=
+    fun i => norm_ge_coord_mul_norm (b i) (hb i) (ms j₀ i) (idx i)
+  -- Ultrametric upper bounds: ‖m i‖ ≤ coord(idx) * basis(idx)
+  have hm_up : ∀ i, ‖m i‖ ≤ ‖(b i).coord (idx i) (m i)‖ * ‖(b i) (idx i)‖ := by
+    intro i; conv_lhs => rw [← (b i).sum_repr (m i)]
+    exact (norm_sum_le_iSup_mul_norm (b i) _).trans (ciSup_le (fun k => hidx i k))
+  -- Assembly: chain the product inequalities
+  have hB_nn : ∀ i, (0 : ℝ) ≤ ‖(b i).coord (idx i) (ms j₀ i)‖ * ‖(b i) (idx i)‖ :=
+    fun i => mul_nonneg (norm_nonneg _) (norm_nonneg _)
+  have hinv : (0 : ℝ) ≤ (1 + ε)⁻¹ := inv_nonneg.mpr (by linarith)
+  -- Step 1: ∏ ‖ms j₀ i‖ ≥ ∏ ((1+ε)⁻¹ * coord * basis)
+  have h1 : ∏ i, ‖ms j₀ i‖ ≥ ∏ i, ((1 + ε)⁻¹ * (‖(b i).coord (idx i) (ms j₀ i)‖ *
+      ‖(b i) (idx i)‖)) :=
+    Finset.prod_le_prod (fun i _ => mul_nonneg hinv (hB_nn i)) (fun i _ => (hfactor i).le)
+  -- Step 2: factor out constant
+  have h2 : ∏ i, ((1 + ε)⁻¹ * (‖(b i).coord (idx i) (ms j₀ i)‖ * ‖(b i) (idx i)‖)) =
+      (1 + ε)⁻¹ ^ Fintype.card ι * ∏ i, (‖(b i).coord (idx i) (ms j₀ i)‖ *
+      ‖(b i) (idx i)‖) := by
+    rw [Finset.prod_mul_distrib, Finset.prod_const, Finset.card_univ]
+  -- Step 3: ∏ (coord(ms j₀) * basis) ≥ ∏ (coord(m) * basis)
+  have h3 : ∏ i, (‖(b i).coord (idx i) (ms j₀ i)‖ * ‖(b i) (idx i)‖) ≥
+      ∏ i, (‖(b i).coord (idx i) (m i)‖ * ‖(b i) (idx i)‖) := by
+    rw [Finset.prod_mul_distrib, Finset.prod_mul_distrib]
+    exact mul_le_mul_of_nonneg_right hj₀.le
+      (Finset.prod_nonneg (fun i _ => norm_nonneg _))
+  -- Step 4: ∏ (coord(m) * basis) ≥ ∏ ‖m i‖
+  have h4 : ∏ i, (‖(b i).coord (idx i) (m i)‖ * ‖(b i) (idx i)‖) ≥ ∏ i, ‖m i‖ :=
+    Finset.prod_le_prod (fun i _ => norm_nonneg _) (fun i _ => hm_up i)
+  -- Chain: sum ≥ j₀ term ≥ (1+ε)⁻ⁿ * ∏ ‖m i‖
+  have hsum : ∑ j, ∏ i, ‖ms j i‖ ≥ ∏ i, ‖ms j₀ i‖ :=
+    Finset.single_le_sum (fun j _ => Finset.prod_nonneg (fun i _ => norm_nonneg _))
+      (Finset.mem_univ j₀)
+  calc ∑ j, ∏ i, ‖ms j i‖
+      ≥ ∏ i, ‖ms j₀ i‖ := hsum
+    _ ≥ ∏ i, ((1 + ε)⁻¹ *
+        (‖(b i).coord (idx i) (ms j₀ i)‖ * ‖(b i) (idx i)‖)) := h1
+    _ = (1 + ε)⁻¹ ^ Fintype.card ι *
+        ∏ i, (‖(b i).coord (idx i) (ms j₀ i)‖ * ‖(b i) (idx i)‖) := h2
+    _ ≥ (1 + ε)⁻¹ ^ Fintype.card ι *
+        ∏ i, (‖(b i).coord (idx i) (m i)‖ * ‖(b i) (idx i)‖) :=
+      mul_le_mul_of_nonneg_left h3.le (pow_nonneg hinv (Fintype.card ι))
+    _ ≥ (1 + ε)⁻¹ ^ Fintype.card ι * ∏ i, ‖m i‖ :=
+      mul_le_mul_of_nonneg_left h4.le (pow_nonneg hinv (Fintype.card ι))
+
 /-- **Step 12**: The projective seminorm of a pure tensor is at least `∏ ‖m i‖`
 in ultrametric spaces.
 
