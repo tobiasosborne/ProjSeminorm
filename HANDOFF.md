@@ -1567,3 +1567,38 @@ Auerbach bases (determinant-maximizing bases with ‖e_i‖ = ‖e_i*‖ = 1) DO
    in finite dimensions over ℂ_p. Every approach that routes through coordinates or duality hits this wall.
 
   If CP is true unconditionally, the proof must be non-dual — it cannot go through evaluation of functionals on tensor representations. That's a fundamentally different kind of argument, and I don't see one.
+
+---
+
+### Session 22 (2026-02-13): Structural refactor + S2-limit filled
+
+Three incremental steps toward eliminating the 2 remaining sorries in SchneiderReduction.lean:
+
+1. **Refactored `suffices` in `exists_epsOrthogonal_basis`** (sorry 1, line 190):
+   Changed `suffices h : ∀ d F [...], finrank F = d → ∃ b, IsEpsOrthogonal ε b`
+   to `suffices h : ∀ d ε', 0 < ε' → ∀ F [...], finrank F = d → ∃ b, IsEpsOrthogonal ε' b`.
+   The IH now takes `ε'` explicitly, enabling the δ = √(1+ε')-1 trick in future work.
+   Adjusted zero/succ cases to intro and use `ε'`/`hε'` throughout.
+
+2. **Split sorry 2 into S2-limit + S2-bound** (`projectiveSeminorm_tprod_ge_ultrametric`):
+   Added `suffices heps : ∀ ε > 0, (1+ε)⁻¹ ^ card ι * ∏ ‖m i‖ ≤ projseminorm(⊗ m)`.
+   This factors the proof into a per-ε lower bound (S2-bound) and limit deduction (S2-limit).
+
+3. **Filled S2-limit completely** (no sorry):
+   Used `le_of_forall_pos_lt_add` with `ε₀ = δ / (2n·M)`. Key steps:
+   - n=0 case: trivial (`(1+ε)⁻¹ ^ 0 = 1` so `heps` gives `M ≤ P` directly)
+   - n>0 case: Bernoulli via `one_add_mul_sub_le_pow` gives `(1+ε₀)⁻¹ ^ n ≥ 1 - nε₀`,
+     then `nε₀M = δ/2` so `M - δ/2 ≤ P`, hence `M < P + δ`.
+
+**Build**: 2341 jobs, 0 errors, 2 sorry warnings (unchanged count, but sorry 2 is now smaller).
+
+**Current state**:
+- 9 Lean files, ~920 LOC. SchneiderReduction.lean has 2 sorries:
+  - **Sorry 1** (line 190): `exists_epsOrthogonal_basis` inductive step — needs controlled lifts
+    (δ trick enabled by refactored suffices, next: ProjSeminorm-ba7 S1-setup)
+  - **Sorry 2** (line 433): S2-bound — per-ε lower bound using ε-orthogonal bases + dualDistribL
+    (S2-limit is now filled, next: ProjSeminorm-nnq)
+
+**Next session should**:
+1. Sorry 1: Implement δ = √(1+ε')-1 and controlled lifts (ProjSeminorm-ba7)
+2. Sorry 2: CLM construction via `LinearMap.mkContinuous` on basis coords (ProjSeminorm-nnq)

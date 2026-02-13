@@ -147,20 +147,20 @@ theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
     ∃ (b : Module.Basis (Fin (Module.finrank 𝕜 E)) 𝕜 E), IsEpsOrthogonal ε b := by
   -- Factor through induction on the natural number `d = finrank 𝕜 E`,
   -- quantifying universally over the space to allow the IH to apply to quotients.
-  suffices h : ∀ (d : ℕ) (F : Type _) [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
-      [IsUltrametricDist F] [FiniteDimensional 𝕜 F],
+  suffices h : ∀ (d : ℕ) (ε' : ℝ), 0 < ε' → ∀ (F : Type _) [SeminormedAddCommGroup F]
+      [NormedSpace 𝕜 F] [IsUltrametricDist F] [FiniteDimensional 𝕜 F],
       Module.finrank 𝕜 F = d →
-      ∃ (b : Module.Basis (Fin d) 𝕜 F), IsEpsOrthogonal ε b by
-    exact h _ E rfl
+      ∃ (b : Module.Basis (Fin d) 𝕜 F), IsEpsOrthogonal ε' b by
+    exact h _ ε hε E rfl
   intro d
   induction d with
   | zero =>
-    intro F _ _ _ _ hd
+    intro ε' hε' F _ _ _ _ hd
     haveI : Module.Free 𝕜 F := Module.Free.of_divisionRing (K := 𝕜) (V := F)
-    refine ⟨Module.finBasisOfFinrankEq 𝕜 F hd, hε, fun c => ?_⟩
+    refine ⟨Module.finBasisOfFinrankEq 𝕜 F hd, hε', fun c => ?_⟩
     simp [Finset.univ_eq_empty]
   | succ n ih =>
-    intro F _ _ _ _ hd
+    intro ε' hε' F _ _ _ _ hd
     -- E is nontrivial (finrank > 0)
     have hpos : 0 < Module.finrank 𝕜 F := by omega
     haveI : Nontrivial F := Module.nontrivial_of_finrank_pos hpos
@@ -175,14 +175,15 @@ theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
       have := Submodule.finrank_quotient_add_finrank W; omega
     -- Quotient is ultrametric
     haveI : IsUltrametricDist (F ⧸ W) := isUltrametricDist_quotient W
-    -- Apply IH to get ε-orthogonal basis of quotient
-    obtain ⟨bQ, hbQ⟩ := ih (F ⧸ W) hQn
+    -- Apply IH to get ε'-orthogonal basis of quotient
+    -- (Later: call with δ = √(1+ε')-1 instead of ε' for tighter control)
+    obtain ⟨bQ, hbQ⟩ := ih ε' hε' (F ⧸ W) hQn
     -- Get a basis of W (1-dimensional)
     set bW := Module.finBasisOfFinrankEq 𝕜 W hW1
     -- Combine into basis of F via sumQuot, then reindex Fin 1 ⊕ Fin n ≃ Fin (n+1)
     set bF := (bW.sumQuot bQ).reindex (finSumFinEquiv.trans (finCongr (Nat.add_comm 1 n)))
-    refine ⟨bF, hε, fun c => ?_⟩
-    -- Need: ‖∑ i, c i • bF i‖ ≥ (1+ε)⁻¹ * ⨆ i, ‖c i‖ * ‖bF i‖
+    refine ⟨bF, hε', fun c => ?_⟩
+    -- Need: ‖∑ i, c i • bF i‖ ≥ (1+ε')⁻¹ * ⨆ i, ‖c i‖ * ‖bF i‖
     -- The quotient map sends ∑ c i • bF i to the "quotient part" of the sum.
     -- By ε-orthogonality of bQ in the quotient and the ultrametric property,
     -- the combined basis is ε-orthogonal. (See Schneider, Lemma 17.3)
@@ -391,13 +392,44 @@ theorem projectiveSeminorm_tprod_ge_ultrametric
     exact apply_nonneg _ _
   · -- All factors have positive norm
     push_neg at hm
-    -- Proof plan (dualDistribL approach, mirrors WithBidual.lean):
-    -- For each i and ε > 0, use ε-orthogonal basis to construct
-    -- a CLM gᵢ : E'(i) →L[𝕜] 𝕜 via LinearMap.mkContinuous on bᵢ.coord i₀.
-    -- The maximizer gives |gᵢ(mᵢ)|/‖gᵢ‖ ≥ ‖mᵢ‖/(1+ε).
-    -- Apply dualDistribL(⊗ gᵢ) + norm_dualDistribL_tprod_le to get:
-    --   projseminorm ≥ (1+ε)⁻ⁿ * ∏ ‖mᵢ‖
-    -- Take ε → 0 via le_of_forall_pos_lt_add + one_add_mul_le_pow (Bernoulli).
+    -- Strategy: show (1+ε)⁻ⁿ * ∏ ‖m i‖ ≤ projseminorm for all ε > 0,
+    -- then take ε → 0.
+    rw [ge_iff_le]
+    suffices heps : ∀ ε : ℝ, 0 < ε →
+        (1 + ε)⁻¹ ^ Fintype.card ι * ∏ i, ‖m i‖ ≤
+        projectiveSeminorm (⨂ₜ[𝕜] i, m i) by
+      -- S2-limit: deduce ∏ ‖m i‖ ≤ projseminorm from heps by taking ε → 0
+      apply le_of_forall_pos_lt_add
+      intro δ hδ
+      have hM : (0 : ℝ) < ∏ i, ‖m i‖ :=
+        Finset.prod_pos fun i _ => lt_of_le_of_ne (norm_nonneg _) (hm i).symm
+      by_cases hn : Fintype.card ι = 0
+      · have := heps 1 one_pos; simp [hn] at this; linarith
+      · set n := Fintype.card ι
+        have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+        set ε₀ := δ / (2 * ↑n * ∏ i, ‖m i‖) with hε₀_def
+        have hε₀ : 0 < ε₀ := div_pos hδ (by positivity)
+        have h1 := heps ε₀ hε₀
+        have h1e : (0 : ℝ) < 1 + ε₀ := by linarith
+        have h_inv_nn : (0 : ℝ) ≤ (1 + ε₀)⁻¹ := le_of_lt (inv_pos.mpr h1e)
+        have h_inv_ge : (-1 : ℝ) ≤ (1 + ε₀)⁻¹ := by linarith
+        -- Bernoulli: (1+ε₀)⁻¹ ^ n ≥ 1 - n * ε₀
+        have hbern : 1 - ↑n * ε₀ ≤ (1 + ε₀)⁻¹ ^ n := by
+          calc (1 : ℝ) - ↑n * ε₀
+              ≤ 1 + ↑n * ((1 + ε₀)⁻¹ - 1) := by
+                have : ε₀ / (1 + ε₀) ≤ ε₀ := by
+                  rw [div_le_iff₀ h1e]; nlinarith [hε₀.le]
+                have : (1 + ε₀)⁻¹ - 1 = -(ε₀ / (1 + ε₀)) := by field_simp; ring
+                nlinarith [hn_pos]
+            _ ≤ (1 + ε₀)⁻¹ ^ n := one_add_mul_sub_le_pow h_inv_ge n
+        have h2 : (1 - ↑n * ε₀) * ∏ i, ‖m i‖ ≤ projectiveSeminorm (⨂ₜ[𝕜] i, m i) :=
+          le_trans (mul_le_mul_of_nonneg_right hbern (le_of_lt hM)) h1
+        have h3 : ↑n * ε₀ * ∏ i, ‖m i‖ = δ / 2 := by
+          have := ne_of_gt (mul_pos hn_pos hM)
+          simp only [hε₀_def]; field_simp
+        linarith
+    intro ε hε
+    -- S2-bound: per-ε bound using ε-orthogonal bases + dualDistribL
     sorry
 
 /-- **Step 13**: The Cross Property for pi tensor products over ultrametric norms:
