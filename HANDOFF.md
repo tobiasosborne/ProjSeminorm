@@ -1641,3 +1641,52 @@ Three incremental steps toward eliminating the 2 remaining sorries in SchneiderR
 1. Change lift to multiplicative bound: `‖e_lift j‖ < (1+δ)·‖bQ j‖` (requires ‖bQ j‖ > 0)
 2. Prove ε-orthogonality (ProjSeminorm-9q2) using Schneider's argument
 3. Consider whether to add `NormedAddCommGroup` hypothesis for clean ‖bQ j‖ > 0
+
+---
+
+### Session 27 (2026-02-13): LAST SORRY FILLED — 0 SORRIES
+
+**Achievement**: Filled the last remaining sorry in `exists_epsOrthogonal_basis` (the
+ε-orthogonality of the combined basis). **The project is now sorry-free.**
+
+**Key changes to SchneiderReduction.lean**:
+
+1. **Variable block**: Changed from `SeminormedAddCommGroup` to `NormedAddCommGroup` for E, F,
+   and `E' i`. This is necessary because the Schneider reduction requires `NormedAddCommGroup`
+   (true norms, not seminorms) for:
+   - `norm_pos_iff` on quotient basis vectors (ensures `‖bQ j‖ > 0`)
+   - `Submodule.closed_of_finiteDimensional` (requires `T2Space`, provided by `MetricSpace`)
+   - `Submodule.Quotient.normedAddCommGroup` (requires `IsClosed` on the submodule)
+
+2. **Added import**: `Mathlib.Topology.Algebra.Module.FiniteDimension` for
+   `Submodule.closed_of_finiteDimensional`
+
+3. **`exists_epsOrthogonal_basis`**: Added `[CompleteSpace 𝕜]` hypothesis. Changed the
+   `suffices` to quantify over `NormedAddCommGroup F` (not `SeminormedAddCommGroup`).
+   Used multiplicative lifts (`‖e_lift j‖ < (1+δ) * ‖bQ j‖`) instead of additive lifts.
+   Complete proof (~140 lines) using:
+   - δ = ε'/(2+ε'), so (1+δ)² ≤ 1+ε'
+   - Multiplicative lift via `norm_lift` with tolerance δ·‖bQ j‖
+   - Tail bound via quotient chain + multiplicative lifts + δ-orthogonality
+   - Per-index bound via `Finite.exists_max` (maximizer approach)
+   - Case split i=0: Case A (direct) / Case B (ultrametric isosceles → head ≤ tail)
+   - Case i=j.succ: direct from tail bound
+
+4. **Downstream theorems**: Added `[CompleteSpace 𝕜]` to `representation_cost_ge`,
+   `representation_cost_ge_pi`, `projectiveSeminorm_tprod_ge_ultrametric`,
+   `projectiveSeminorm_tprod_ultrametric`.
+
+5. **Technical issues resolved**:
+   - `omit ... in` doesn't work for dependent instance chains (Module from NormedSpace
+     when SeminormedAddCommGroup is derived from NormedAddCommGroup). Solved by changing
+     the variable block globally.
+   - `Fin.eq_zero_or_pos` doesn't exist; used `Fin.eq_zero_or_eq_succ` instead.
+   - `inv_le_one₀` is now an iff; used `inv_le_one_of_one_le₀` for direct implication.
+   - Bound variables in `⨆ j, ... j.succ ...` need type annotations: `⨆ (j : Fin n), ...`
+   - `Finite.bddAbove_range _` needs explicit function argument with NormedAddCommGroup.
+
+**Build status**: 2341 jobs, 0 errors, 0 sorries, 1 lint warning (pre-existing `tprod_ne_zero`).
+
+**Project status**: COMPLETE. All theorems proven, sorry-free. The Cross Property
+`projectiveSeminorm (⨂ₜ i, m i) = ∏ i, ‖m i‖` is fully formalized for ultrametric
+normed spaces over complete non-archimedean fields.

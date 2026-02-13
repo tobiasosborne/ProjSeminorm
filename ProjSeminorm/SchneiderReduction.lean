@@ -12,6 +12,7 @@ import Mathlib.LinearAlgebra.Basis.VectorSpace
 import Mathlib.LinearAlgebra.Dimension.Finrank
 import Mathlib.Data.Fintype.Order
 import Mathlib.Analysis.Normed.Group.Quotient
+import Mathlib.Topology.Algebra.Module.FiniteDimension
 
 /-!
 # Schneider Reduction: Cross Property for Ultrametric Norms
@@ -49,8 +50,8 @@ noncomputable section
 namespace ProjSeminorm
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
-variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
-variable {F : Type*} [SeminormedAddCommGroup F] [NormedSpace 𝕜 F]
+variable {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E]
+variable {F : Type*} [NormedAddCommGroup F] [NormedSpace 𝕜 F]
 
 -- ============================================================================
 -- Step 2: Ultrametric norm upper bound for basis expansions
@@ -139,16 +140,21 @@ lemma isUltrametricDist_quotient [IsUltrametricDist E] (p : Submodule 𝕜 E) :
 /-- Every finite-dimensional ultrametric normed space admits an ε-orthogonal basis
 for any ε > 0. This is the key infrastructure lemma.
 
-The proof is by induction on `finrank`. The inductive step picks a vector `v` with
-`‖v‖` close to the supremum norm, projects onto `span {v}ᗮ`, and recurses.
+The proof is by induction on `finrank`. The inductive step picks a vector `v`,
+quotients by `span {v}`, gets an ε-orthogonal basis of the quotient by IH,
+lifts back with multiplicative norm control, and proves ε-orthogonality via
+the ultrametric isosceles property.
+
+Requires `CompleteSpace 𝕜` so that finite-dimensional submodules are closed
+(needed for the quotient to be a normed — not merely seminormed — space).
 
 Reference: Schneider, Lemma 17.3. -/
-theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
-    [FiniteDimensional 𝕜 E] (ε : ℝ) (hε : 0 < ε) :
+theorem exists_epsOrthogonal_basis [CompleteSpace 𝕜]
+    [IsUltrametricDist E] [FiniteDimensional 𝕜 E] (ε : ℝ) (hε : 0 < ε) :
     ∃ (b : Module.Basis (Fin (Module.finrank 𝕜 E)) 𝕜 E), IsEpsOrthogonal ε b := by
-  -- Factor through induction on the natural number `d = finrank 𝕜 E`,
-  -- quantifying universally over the space to allow the IH to apply to quotients.
-  suffices h : ∀ (d : ℕ) (ε' : ℝ), 0 < ε' → ∀ (F : Type _) [SeminormedAddCommGroup F]
+  -- Factor through induction on `d = finrank`, quantifying universally over the
+  -- space (with NormedAddCommGroup) to allow the IH to apply to quotients.
+  suffices h : ∀ (d : ℕ) (ε' : ℝ), 0 < ε' → ∀ (F : Type _) [NormedAddCommGroup F]
       [NormedSpace 𝕜 F] [IsUltrametricDist F] [FiniteDimensional 𝕜 F],
       Module.finrank 𝕜 F = d →
       ∃ (b : Module.Basis (Fin d) 𝕜 F), IsEpsOrthogonal ε' b by
@@ -162,76 +168,208 @@ theorem exists_epsOrthogonal_basis [IsUltrametricDist E]
     simp [Finset.univ_eq_empty]
   | succ n ih =>
     intro ε' hε' F _ _ _ _ hd
-    -- E is nontrivial (finrank > 0)
     have hpos : 0 < Module.finrank 𝕜 F := by omega
     haveI : Nontrivial F := Module.nontrivial_of_finrank_pos hpos
-    -- Pick nonzero v₀
     obtain ⟨v₀, hv₀⟩ := exists_ne (0 : F)
-    -- Form submodule W = span {v₀}
     set W : Submodule 𝕜 F := 𝕜 ∙ v₀ with hW_def
-    -- W has finrank 1
     have hW1 : Module.finrank 𝕜 W = 1 := finrank_span_singleton hv₀
-    -- Quotient has finrank n
     have hQn : Module.finrank 𝕜 (F ⧸ W) = n := by
       have := Submodule.finrank_quotient_add_finrank W; omega
     -- Quotient is ultrametric
     haveI : IsUltrametricDist (F ⧸ W) := isUltrametricDist_quotient W
+    -- Quotient is normed (W is closed since finite-dimensional + CompleteSpace 𝕜)
+    haveI : FiniteDimensional 𝕜 W := Module.finite_of_finrank_eq_succ hW1
+    haveI : IsClosed (W : Set F) := Submodule.closed_of_finiteDimensional W
     -- Set δ = ε'/(2+ε') > 0; key property: (1+δ)² ≤ 1+ε'
     set δ := ε' / (2 + ε') with hδ_def
     have hδ : 0 < δ := div_pos hε' (by linarith)
+    have h1δ : (0 : ℝ) < 1 + δ := by linarith
     -- Apply IH with δ to get δ-orthogonal basis of quotient
     obtain ⟨bQ, hbQ⟩ := ih δ hδ (F ⧸ W) hQn
     -- Get a basis of W (1-dimensional)
     set bW := Module.finBasisOfFinrankEq 𝕜 W hW1
-    -- Choose near-optimal lifts via quotient norm infimum approximation
-    -- For each j, get eⱼ with π(eⱼ) = bQ j and ‖eⱼ‖ < ‖bQ j‖ + δ
+    -- Multiplicative lifts: ‖eⱼ‖ < (1+δ) * ‖bQ j‖
+    -- (uses ‖bQ j‖ > 0, which requires NormedAddCommGroup on the quotient)
     have hπQ := NormedAddGroupHom.isQuotientQuotient W.toAddSubgroup
     have hlift : ∀ j : Fin n, ∃ e : F,
         W.toAddSubgroup.normedMk e = (bQ j : F ⧸ W) ∧
-        ‖e‖ < ‖(bQ j : F ⧸ W)‖ + δ :=
-      fun j => hπQ.norm_lift hδ (bQ j)
+        ‖e‖ < (1 + δ) * ‖(bQ j : F ⧸ W)‖ := by
+      intro j
+      have hbQ_pos : 0 < ‖(bQ j : F ⧸ W)‖ := norm_pos_iff.mpr (bQ.ne_zero j)
+      obtain ⟨e, he1, he2⟩ := hπQ.norm_lift (mul_pos hδ hbQ_pos) (bQ j)
+      exact ⟨e, he1, by linarith⟩
     choose e_lift he_mk he_bound using hlift
     -- Define the combined family: 0 ↦ (bW 0 : F), j+1 ↦ e_lift j
     set b_fun : Fin (n + 1) → F := Fin.cons (↑(bW 0) : F) e_lift
-    -- Construct basis from linear independence + spanning
     -- Relate normedMk to mkQ for linear algebra reasoning
-    have hπ_eq : ∀ x : F, (W.toAddSubgroup.normedMk x : F ⧸ W) = Submodule.mkQ W x := fun _ => rfl
-    -- The lifts compose with mkQ to give bQ (linearly independent)
+    have hπ_eq : ∀ x : F,
+        (W.toAddSubgroup.normedMk x : F ⧸ W) = Submodule.mkQ W x := fun _ => rfl
     have he_mkQ : ∀ j : Fin n, Submodule.mkQ W (e_lift j) = bQ j :=
       fun j => (hπ_eq (e_lift j)).symm ▸ he_mk j
+    -- Linear independence
     have h_li : LinearIndependent 𝕜 b_fun := by
       rw [linearIndependent_fin_cons]
       refine ⟨?_, ?_⟩
-      · -- e_lift is LI because mkQ ∘ e_lift = bQ is LI
-        exact LinearIndependent.of_comp (Submodule.mkQ W) (by
+      · exact LinearIndependent.of_comp (Submodule.mkQ W) (by
           rw [show Submodule.mkQ W ∘ e_lift = (bQ : Fin n → F ⧸ W) from funext he_mkQ]
           exact bQ.linearIndependent)
-      · -- ↑(bW 0) ∉ span(e_lift): extract sum rep, apply mkQ, use LI of bQ
-        intro hmem
+      · intro hmem
         obtain ⟨c, hc⟩ := (Submodule.mem_span_range_iff_exists_fun 𝕜).mp hmem
-        -- hc : ∑ j, c j • e_lift j = ↑(bW 0)
-        -- Apply mkQ W: ∑ c j • bQ j = mkQ(↑(bW 0)) = 0
         have hbW0_mem : (↑(bW 0) : F) ∈ W := (bW 0).property
         have hq : ∑ j : Fin n, c j • (bQ j : F ⧸ W) = 0 := by
           have h := congr_arg (Submodule.mkQ W) hc
           simp only [map_sum, map_smul, he_mkQ] at h
           rwa [Submodule.mkQ_apply, (Submodule.Quotient.mk_eq_zero W).mpr hbW0_mem] at h
-        -- By LI of bQ: c j = 0 for all j
         have hc0 : ∀ j, c j = 0 :=
           (Fintype.linearIndependent_iff.mp bQ.linearIndependent) c hq
-        -- So ↑(bW 0) = 0, contradicting basis nonzero
         simp only [hc0, zero_smul, Finset.sum_const_zero] at hc
         exact Subtype.coe_injective.ne (bW.ne_zero 0) hc.symm
+    -- Spanning
     have h_span : ⊤ ≤ Submodule.span 𝕜 (Set.range b_fun) :=
       (h_li.span_eq_top_of_card_eq_finrank' (by simp [hd])).ge
     set bF := Module.Basis.mk h_li h_span
     refine ⟨bF, hε', fun c => ?_⟩
-    -- ε'-orthogonality via Schneider's argument (Lemma 17.3):
-    -- (1) ‖x‖ ≥ ‖π(x)‖ ≥ (1+δ)⁻¹ max_{i≥1} |c i|‖bQ i‖
-    --     ≥ (1+δ)⁻² max_{i≥1} |c i|‖bF i‖     (lift control)
-    -- (2) |c 0|‖bF 0‖ ≤ max(‖x‖, max_{i≥1} |c i|‖bF i‖) ≤ (1+δ)²‖x‖  (ultrametric)
-    -- Combined with (1+δ)² ≤ 1+ε': ‖x‖ ≥ (1+ε')⁻¹ ⨆ i, ‖c i‖ * ‖bF i‖
-    sorry
+    -- ε'-orthogonality via Schneider's argument (Lemma 17.3)
+    -- Key δ properties
+    have hδ_sq : (1 + δ) ^ 2 ≤ 1 + ε' := by
+      have h2ε : (0 : ℝ) < 2 + ε' := by linarith
+      have hδ_eq : (2 + ε') * δ = ε' := by rw [hδ_def]; field_simp
+      nlinarith [sq_nonneg δ]
+    have hδ_inv : (1 + ε')⁻¹ ≤ (1 + δ)⁻¹ ^ 2 := by
+      rw [inv_pow]; gcongr
+    -- Basis vector evaluation
+    have hbF_zero : (bF 0 : F) = ↑(bW 0) := by
+      simp [bF, Module.Basis.mk_apply, b_fun, Fin.cons_zero]
+    have hbF_succ : ∀ j : Fin n, (bF j.succ : F) = e_lift j := by
+      intro j; simp [bF, Module.Basis.mk_apply, b_fun, Fin.cons_succ]
+    -- Decompose x = head + tail
+    set x := ∑ i : Fin (n + 1), c i • (bF i : F)
+    have hx_split : x = c 0 • ↑(bW 0) + ∑ j : Fin n, c j.succ • e_lift j := by
+      simp only [x, Fin.sum_univ_succ, hbF_zero, hbF_succ]
+    -- Quotient image of x
+    have hquot : Submodule.mkQ W x = ∑ j : Fin n, c j.succ • (bQ j : F ⧸ W) := by
+      rw [hx_split, map_add, map_sum]
+      simp only [map_smul, he_mkQ, Submodule.mkQ_apply,
+        (Submodule.Quotient.mk_eq_zero W).mpr (bW 0).property, smul_zero, zero_add]
+    -- Multiplicative lift bound: ‖bQ j‖ ≥ (1+δ)⁻¹ * ‖e_lift j‖
+    have hlift_mult : ∀ j : Fin n,
+        (1 + δ)⁻¹ * ‖e_lift j‖ ≤ ‖(bQ j : F ⧸ W)‖ := by
+      intro j; rw [inv_mul_le_iff₀ h1δ]; exact (he_bound j).le
+    -- Tail bound: ‖x‖ ≥ (1+ε')⁻¹ * ⨆ j, ‖c j.succ‖ * ‖bF j.succ‖
+    have h_tail : (1 + ε')⁻¹ * (⨆ j : Fin n, ‖c j.succ‖ * ‖(bF j.succ : F)‖) ≤ ‖x‖ := by
+      by_cases hn0 : n = 0
+      · subst hn0; simp [mul_zero]
+      · haveI : Nonempty (Fin n) := ⟨⟨0, Nat.pos_of_ne_zero hn0⟩⟩
+        -- Find the maximizer for ‖c j.succ‖ * ‖e_lift j‖
+        obtain ⟨j_max, hj_max⟩ :=
+          Finite.exists_max (fun j : Fin n => ‖c j.succ‖ * ‖e_lift j‖)
+        have h_sup_e : ⨆ (j : Fin n), ‖c j.succ‖ * ‖e_lift j‖ =
+            ‖c j_max.succ‖ * ‖e_lift j_max‖ := by
+          exact le_antisymm (ciSup_le hj_max)
+            (le_ciSup (Finite.bddAbove_range (fun j => ‖c j.succ‖ * ‖e_lift j‖)) j_max)
+        -- Chain: (1+ε')⁻¹ * ⨆_j ‖c j.succ‖ * ‖bF j.succ‖
+        --   ≤ (1+δ)⁻² * ⨆ ... = (1+δ)⁻¹ * ((1+δ)⁻¹ * ⨆ ...)
+        --   ≤ (1+δ)⁻¹ * ⨆ j ‖c j.succ‖ * ‖bQ j‖  (multiplicative lift)
+        --   ≤ ‖π(x)‖ ≤ ‖x‖
+        calc (1 + ε')⁻¹ * (⨆ (j : Fin n), ‖c j.succ‖ * ‖(bF j.succ : F)‖)
+            = (1 + ε')⁻¹ * (⨆ (j : Fin n), ‖c j.succ‖ * ‖e_lift j‖) := by
+              congr 1; congr 1; ext j; rw [hbF_succ]
+          _ ≤ (1 + δ)⁻¹ ^ 2 * (⨆ (j : Fin n), ‖c j.succ‖ * ‖e_lift j‖) := by
+              gcongr
+              exact le_ciSup_of_le (Finite.bddAbove_range
+                (fun j => ‖c j.succ‖ * ‖e_lift j‖)) j_max
+                (mul_nonneg (norm_nonneg _) (norm_nonneg _))
+          _ = (1 + δ)⁻¹ * ((1 + δ)⁻¹ * (⨆ (j : Fin n), ‖c j.succ‖ * ‖e_lift j‖)) := by
+              rw [sq]; ring
+          _ = (1 + δ)⁻¹ * ((1 + δ)⁻¹ * (‖c j_max.succ‖ * ‖e_lift j_max‖)) := by
+              rw [h_sup_e]
+          _ = (1 + δ)⁻¹ * (‖c j_max.succ‖ * ((1 + δ)⁻¹ * ‖e_lift j_max‖)) := by
+              ring
+          _ ≤ (1 + δ)⁻¹ * (‖c j_max.succ‖ * ‖(bQ j_max : F ⧸ W)‖) :=
+              mul_le_mul_of_nonneg_left
+                (mul_le_mul_of_nonneg_left (hlift_mult j_max) (norm_nonneg _))
+                (inv_nonneg.mpr h1δ.le)
+          _ ≤ (1 + δ)⁻¹ * (⨆ (j : Fin n), ‖c j.succ‖ * ‖(bQ j : F ⧸ W)‖) :=
+              mul_le_mul_of_nonneg_left
+                (le_ciSup (Finite.bddAbove_range
+                  (fun j => ‖c j.succ‖ * ‖(bQ j : F ⧸ W)‖)) j_max)
+                (inv_nonneg.mpr h1δ.le)
+          _ ≤ ‖∑ j, c j.succ • (bQ j : F ⧸ W)‖ := (hbQ.2 (fun j => c j.succ)).le
+          _ = ‖Submodule.mkQ W x‖ := by rw [hquot]
+          _ ≤ ‖x‖ := Submodule.Quotient.norm_mk_le W x
+    -- Per-index bound via maximizer
+    rw [ge_iff_le]
+    obtain ⟨i_max, hi_max⟩ :=
+      Finite.exists_max (fun i : Fin (n + 1) => ‖c i‖ * ‖(bF i : F)‖)
+    calc (1 + ε')⁻¹ * ⨆ i, ‖c i‖ * ‖(bF i : F)‖
+        = (1 + ε')⁻¹ * (‖c i_max‖ * ‖(bF i_max : F)‖) := by
+          congr 1
+          exact le_antisymm (ciSup_le hi_max)
+            (le_ciSup (Finite.bddAbove_range
+              (fun i => ‖c i‖ * ‖(bF i : F)‖)) i_max)
+      _ ≤ ‖x‖ := by
+          -- Case split: i_max = 0 or i_max = j.succ
+          rcases i_max.eq_zero_or_eq_succ with rfl | ⟨j, rfl⟩
+          · -- i_max = 0: head term
+            by_cases ha : ‖c 0‖ * ‖(bF 0 : F)‖ ≤ ‖x‖
+            · -- Case A: ‖head‖ ≤ ‖x‖
+              calc (1 + ε')⁻¹ * _ ≤ 1 * _ := by
+                    gcongr; exact inv_le_one_of_one_le₀ (by linarith)
+                _ = _ := one_mul _
+                _ ≤ ‖x‖ := ha
+            · -- Case B: ultrametric cancellation → head ≤ tail sup
+              push_neg at ha
+              have hab : ‖c 0‖ * ‖(bF 0 : F)‖ ≤
+                  ⨆ j : Fin n, ‖c j.succ‖ * ‖(bF j.succ : F)‖ := by
+                by_cases hn0 : n = 0
+                · -- n = 0: tail is empty, x = head, contradiction
+                  subst hn0
+                  simp only [Finset.univ_eq_empty, Finset.sum_empty, add_zero] at hx_split
+                  have : ‖x‖ = ‖c 0‖ * ‖(bF 0 : F)‖ := by
+                    rw [hx_split, norm_smul, hbF_zero]
+                  linarith
+                · haveI : Nonempty (Fin n) := ⟨⟨0, Nat.pos_of_ne_zero hn0⟩⟩
+                  -- ‖a‖ ≤ ‖b‖ by ultrametric (a = x - b, ‖a‖ > ‖x‖)
+                  set a := c 0 • (↑(bW 0) : F)
+                  set b := ∑ j : Fin n, c j.succ • e_lift j
+                  have hab_eq : x = a + b := hx_split
+                  have ha_norm : ‖a‖ = ‖c 0‖ * ‖(bF 0 : F)‖ := by
+                    rw [norm_smul, hbF_zero]
+                  have ha_le_b : ‖a‖ ≤ ‖b‖ := by
+                    have h1 : ‖a‖ ≤ max ‖x‖ ‖b‖ := by
+                      calc ‖a‖ = ‖x + (-b)‖ := by rw [hab_eq]; abel_nf
+                        _ ≤ max ‖x‖ ‖(-b)‖ :=
+                            IsUltrametricDist.norm_add_le_max x (-b)
+                        _ = max ‖x‖ ‖b‖ := by rw [norm_neg]
+                    rcases le_max_iff.mp h1 with h | h
+                    · linarith [ha_norm]
+                    · exact h
+                  -- ‖b‖ ≤ ⨆ (ultrametric on sum)
+                  have hne : (Finset.univ : Finset (Fin n)).Nonempty :=
+                    Finset.univ_nonempty
+                  obtain ⟨j₀, _, hj₀⟩ :=
+                    IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty
+                      hne (fun j => c j.succ • e_lift j)
+                  calc ‖c 0‖ * ‖(bF 0 : F)‖ = ‖a‖ := ha_norm.symm
+                    _ ≤ ‖b‖ := ha_le_b
+                    _ ≤ ‖c j₀.succ • e_lift j₀‖ := hj₀
+                    _ = ‖c j₀.succ‖ * ‖e_lift j₀‖ := norm_smul _ _
+                    _ = ‖c j₀.succ‖ * ‖(bF j₀.succ : F)‖ := by
+                        rw [hbF_succ]
+                    _ ≤ ⨆ (j : Fin n), ‖c j.succ‖ * ‖(bF j.succ : F)‖ :=
+                        le_ciSup (Finite.bddAbove_range
+                          (fun j => ‖c j.succ‖ * ‖(bF j.succ : F)‖)) j₀
+              calc (1 + ε')⁻¹ * (‖c 0‖ * ‖(bF 0 : F)‖)
+                  ≤ (1 + ε')⁻¹ * ⨆ (j : Fin n), ‖c j.succ‖ * ‖(bF j.succ : F)‖ := by
+                    gcongr
+                _ ≤ ‖x‖ := h_tail
+          · -- i_max = j.succ: tail term
+            calc (1 + ε')⁻¹ * (‖c j.succ‖ * ‖(bF j.succ : F)‖)
+                ≤ (1 + ε')⁻¹ *
+                    ⨆ k : Fin n, ‖c k.succ‖ * ‖(bF k.succ : F)‖ := by
+                  gcongr; exact le_ciSup (Finite.bddAbove_range
+                    (fun k => ‖c k.succ‖ * ‖(bF k.succ : F)‖)) j
+              _ ≤ ‖x‖ := h_tail
 
 -- ============================================================================
 -- Step 6: Coordinate extraction for tensor representations
@@ -352,8 +490,9 @@ Proof outline:
 4. Get j₀ with large coordinate product (Step 7)
 5. Bound ‖vⱼ₀‖ · ‖wⱼ₀‖ from below (Step 9)
 6. The sum ≥ the single term -/
-theorem representation_cost_ge [IsUltrametricDist 𝕜] [IsUltrametricDist E]
-    [IsUltrametricDist F] [FiniteDimensional 𝕜 E] [FiniteDimensional 𝕜 F]
+theorem representation_cost_ge [CompleteSpace 𝕜] [IsUltrametricDist 𝕜]
+    [IsUltrametricDist E] [FiniteDimensional 𝕜 E]
+    [IsUltrametricDist F] [FiniteDimensional 𝕜 F]
     (v : E) (w : F) (n : ℕ) (vs : Fin n → E) (ws : Fin n → F)
     (h : v ⊗ₜ[𝕜] w = ∑ j, vs j ⊗ₜ ws j) (ε : ℝ) (hε : 0 < ε) :
     ∑ j, ‖vs j‖ * ‖ws j‖ ≥ (1 + ε)⁻¹ ^ 4 * (‖v‖ * ‖w‖) := by
@@ -406,7 +545,8 @@ theorem representation_cost_ge [IsUltrametricDist 𝕜] [IsUltrametricDist E]
     have hpow : (1 + ε)⁻¹ ^ 4 ≤ (1 + ε)⁻¹ ^ 2 :=
       pow_le_pow_of_le_one hc hc1 (by norm_num)
     nlinarith [mul_le_mul hv_up hw_up hw.le (mul_nonneg (norm_nonneg _) (norm_nonneg _)),
-               mul_le_mul_of_nonneg_left hj₀ (mul_nonneg (norm_nonneg (bE i₀)) (norm_nonneg (bF k₀))),
+               mul_le_mul_of_nonneg_left hj₀
+                 (mul_nonneg (norm_nonneg (bE i₀)) (norm_nonneg (bF k₀))),
                sq_nonneg ((1 + ε)⁻¹),
                mul_nonneg (norm_nonneg v) (norm_nonneg w)]
 
@@ -417,7 +557,7 @@ theorem representation_cost_ge [IsUltrametricDist 𝕜] [IsUltrametricDist E]
 section CrossProperty
 
 variable {ι : Type*} [Fintype ι] {E' : ι → Type*}
-  [∀ i, SeminormedAddCommGroup (E' i)] [∀ i, NormedSpace 𝕜 (E' i)]
+  [∀ i, NormedAddCommGroup (E' i)] [∀ i, NormedSpace 𝕜 (E' i)]
 
 -- ============================================================================
 -- Step 11b: Multi-factor helpers for pi tensor products
@@ -485,8 +625,8 @@ lemma tprod_ne_zero (m : Π i, E' i) (hm : ∀ i, m i ≠ 0) :
 The proof uses ε-orthogonal bases for each factor, coordinate extraction via
 `dualDistrib`, and ultrametric domination to find a single term with large
 product norm. -/
-theorem representation_cost_ge_pi [IsUltrametricDist 𝕜] [∀ i, IsUltrametricDist (E' i)]
-    [∀ i, FiniteDimensional 𝕜 (E' i)]
+theorem representation_cost_ge_pi [CompleteSpace 𝕜] [IsUltrametricDist 𝕜]
+    [∀ i, IsUltrametricDist (E' i)] [∀ i, FiniteDimensional 𝕜 (E' i)]
     (m : Π i, E' i) (n : ℕ) (ms : Fin n → Π i, E' i)
     (h : (⨂ₜ[𝕜] i, m i) = ∑ j : Fin n, (⨂ₜ[𝕜] i, ms j i))
     (ε : ℝ) (hε : 0 < ε) :
@@ -568,7 +708,7 @@ in ultrametric spaces.
 Since for every ε > 0, every representation has cost ≥ (1+ε)⁻⁴ᵏ · ∏ ‖m i‖
 (by iterated application of `representation_cost_ge`), and as ε → 0 we get
 `(1+ε)⁻⁴ᵏ → 1`, the projective seminorm ≥ ∏ ‖m i‖. -/
-theorem projectiveSeminorm_tprod_ge_ultrametric
+theorem projectiveSeminorm_tprod_ge_ultrametric [CompleteSpace 𝕜]
     [IsUltrametricDist 𝕜] [∀ i, IsUltrametricDist (E' i)]
     [∀ i, FiniteDimensional 𝕜 (E' i)] (m : Π i, E' i) :
     projectiveSeminorm (⨂ₜ[𝕜] i, m i) ≥ ∏ i, ‖m i‖ := by
@@ -722,7 +862,7 @@ Combines the trivial upper bound `projectiveSeminorm_tprod_le` (already in mathl
 with the lower bound from Step 12.
 
 Reference: Schneider, Prop 17.4. -/
-theorem projectiveSeminorm_tprod_ultrametric
+theorem projectiveSeminorm_tprod_ultrametric [CompleteSpace 𝕜]
     [IsUltrametricDist 𝕜] [∀ i, IsUltrametricDist (E' i)]
     [∀ i, FiniteDimensional 𝕜 (E' i)] (m : Π i, E' i) :
     projectiveSeminorm (⨂ₜ[𝕜] i, m i) = ∏ i, ‖m i‖ :=
