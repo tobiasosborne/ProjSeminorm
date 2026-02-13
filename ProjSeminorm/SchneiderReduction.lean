@@ -375,6 +375,54 @@ section CrossProperty
 variable {ι : Type*} [Fintype ι] {E' : ι → Type*}
   [∀ i, SeminormedAddCommGroup (E' i)] [∀ i, NormedSpace 𝕜 (E' i)]
 
+-- ============================================================================
+-- Step 11b: Multi-factor helpers for pi tensor products
+-- ============================================================================
+
+/-- Multi-factor coordinate extraction for pi tensor products.
+Given `⨂ₜ i, m i = ∑_j ⨂ₜ i, ms j i` and bases for each factor,
+the products of coordinates satisfy the same identity:
+  `∏ i, coord(m i) = ∑ j, ∏ i, coord(ms j i)`.
+This generalizes `coord_tensor_eq` from binary to n-ary tensor products.
+
+The proof applies `dualDistrib (⨂ₜ i, coord_i)` — a linear functional on the
+pi tensor product — to both sides of the representation identity. -/
+lemma coord_piTensor_eq
+    {σ : ι → Type*}
+    (b : Π i, Module.Basis (σ i) 𝕜 (E' i))
+    (m : Π i, E' i) (n : ℕ) (ms : Fin n → Π i, E' i)
+    (h : (⨂ₜ[𝕜] i, m i) = ∑ j : Fin n, (⨂ₜ[𝕜] i, ms j i))
+    (idx : Π i, σ i) :
+    ∏ i, (b i).coord (idx i) (m i) = ∑ j : Fin n, ∏ i, (b i).coord (idx i) (ms j i) := by
+  set φ : Module.Dual 𝕜 (⨂[𝕜] i, E' i) :=
+    PiTensorProduct.dualDistrib (R := 𝕜) (M := E') (⨂ₜ[𝕜] i, (b i).coord (idx i))
+  have hφ : ∀ x : Π i, E' i,
+      φ (⨂ₜ[𝕜] i, x i) = ∏ i, (b i).coord (idx i) (x i) :=
+    fun x => PiTensorProduct.dualDistrib_apply _ x
+  rw [← hφ m, h, map_sum]
+  simp only [hφ]
+
+/-- Multi-factor ultrametric domination: if `∏ a_i = ∑_j ∏ a_{j,i}` in a
+non-archimedean field, then some term `j₀` satisfies
+  `∏ i, ‖as j₀ i‖ ≥ ∏ i, ‖a i‖`.
+This generalizes `exists_product_ge_of_sum_eq` from binary to n-ary products.
+
+The proof uses multiplicativity of the norm (`norm_prod`) and the ultrametric
+property (`exists_norm_finset_sum_le_of_nonempty`). -/
+lemma exists_prod_norm_ge_of_sum_eq [IsUltrametricDist 𝕜]
+    (a : ι → 𝕜) (n : ℕ) (as : Fin n → ι → 𝕜)
+    (h : ∏ i, a i = ∑ j, ∏ i, as j i) (hn : 0 < n) :
+    ∃ j, ∏ i, ‖as j i‖ ≥ ∏ i, ‖a i‖ := by
+  haveI : Nonempty (Fin n) := ⟨⟨0, hn⟩⟩
+  have hne : (Finset.univ : Finset (Fin n)).Nonempty := Finset.univ_nonempty
+  obtain ⟨j, _, hj⟩ := IsUltrametricDist.exists_norm_finset_sum_le_of_nonempty hne
+    (fun j => ∏ i, as j i)
+  refine ⟨j, ?_⟩
+  calc ∏ i, ‖a i‖ = ‖∏ i, a i‖ := (norm_prod Finset.univ a).symm
+    _ = ‖∑ j, ∏ i, as j i‖ := by rw [h]
+    _ ≤ ‖∏ i, as j i‖ := hj
+    _ = ∏ i, ‖as j i‖ := norm_prod Finset.univ (as j)
+
 /-- **Step 12**: The projective seminorm of a pure tensor is at least `∏ ‖m i‖`
 in ultrametric spaces.
 
