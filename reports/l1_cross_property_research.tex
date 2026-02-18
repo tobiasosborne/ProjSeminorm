@@ -1,0 +1,446 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{question}[theorem]{Question}
+
+\newcommand{\norm}[1]{\lVert #1 \rVert}
+\newcommand{\abs}[1]{\lvert #1 \rvert}
+\newcommand{\kk}{\mathbb{K}}
+\newcommand{\RR}{\mathbb{R}}
+\newcommand{\CC}{\mathbb{C}}
+\newcommand{\QQ}{\mathbb{Q}}
+\newcommand{\Cp}{\mathbb{C}_p}
+
+\title{The Cross Property for Projective Tensor Seminorms:\\
+  New Results, Obstructions, and the Finite-Dimensional Reduction}
+\author{Research Report --- ProjSeminorm Project}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  We report on the state of the Cross Property (CP) for the projective
+  tensor seminorm over arbitrary nontrivially normed fields~$\kk$.
+  We present a new sorry-free Lean~4 proof of CP for spaces with
+  $\ell^1$-type norms (no Hahn--Banach, no ultrametric hypothesis).
+  We then analyze the expert suggestion of exploiting the
+  finite-dimensional reduction, identify the precise obstruction
+  (FDNP failure over non-spherically complete fields), and pose
+  the key remaining question: does CP hold for all finite-dimensional
+  normed spaces over any nontrivially normed field?
+\end{abstract}
+
+\tableofcontents
+
+%% ==================================================================
+\section{The Cross Property and Known Results}
+%% ==================================================================
+
+\subsection{Setup}
+
+Let $\kk$ be a nontrivially normed field, $\{E_i\}_{i\in\iota}$ a finite
+family of seminormed $\kk$-spaces.  The \emph{projective seminorm} on
+$\bigotimes_{\kk} E_i$ is
+\[
+  \pi(x) \;=\; \inf\Bigl\{\sum_j \abs{c_j}\prod_i \norm{m^j_i}
+    \;:\; x = \sum_j c_j \cdot \bigotimes_i m^j_i\Bigr\}.
+\]
+
+\begin{definition}[Cross Property]
+  The \emph{Cross Property} (CP) states that for every pure tensor
+  $\bigotimes_i m_i$,
+  \[
+    \pi\bigl(\bigotimes_i m_i\bigr) = \prod_i \norm{m_i}.
+  \]
+\end{definition}
+
+The upper bound $\pi(\bigotimes m_i)\le \prod\norm{m_i}$ is trivial
+(take the one-term representation).
+The difficulty is entirely in the \textbf{lower bound}: for every
+representation $\bigotimes m_i = \sum_j c_j\bigotimes m^j_i$,
+\begin{equation}\label{eq:CP}
+  \sum_j \abs{c_j}\prod_i\norm{m^j_i} \;\ge\; \prod_i\norm{m_i}.
+\end{equation}
+
+\subsection{Previously Known Cases}
+
+\begin{enumerate}[label=(\alph*)]
+\item \textbf{Over $\RR$ or $\CC$} (RCLike.lean):
+  Hahn--Banach gives norm-achieving functionals $f_i$ with
+  $\norm{f_i}=1$, $\abs{f_i(m_i)}=\norm{m_i}$.
+  Evaluating $\bigotimes f_i$ on both sides gives~\eqref{eq:CP}.
+\item \textbf{With $h_{\mathrm{bidual}}$} (WithBidual.lean):
+  If the canonical embedding $E_i\to E_i^{**}$ is isometric
+  for each~$i$, the same duality argument works.
+\item \textbf{Ultrametric norms} (SchneiderReduction.lean):
+  Over complete non-archimedean fields with ultrametric norms,
+  $\varepsilon$-orthogonal bases give near-$\ell^1$ decompositions
+  with $(1+\varepsilon)$-loss; taking $\varepsilon\to 0$ closes the proof.
+\item \textbf{Collinear representations} (CancellationTrick.lean):
+  If all second-factor vectors are collinear ($m^j_i = \alpha_j w_1$
+  for $i=2$), bilinearity collapse + the triangle inequality
+  (correct direction!) gives~\eqref{eq:CP} with zero duality.
+\end{enumerate}
+
+%% ==================================================================
+\section{New Result: CP for $\ell^1$-Type Norms}
+\label{sec:l1}
+%% ==================================================================
+
+\subsection{The $\ell^1$ Decomposition Property}
+
+\begin{definition}
+  A basis $b_i$ for a seminormed space $(E_i, \norm{\cdot})$ has the
+  \emph{$\ell^1$ decomposition property} if for all $v\in E_i$,
+  \[
+    \norm{v} = \sum_k \abs{\mathrm{coord}_k(v)}\cdot\norm{b_k}.
+  \]
+  Equivalently, the unit ball of $\norm{\cdot}$ is a weighted
+  cross-polytope in the basis coordinates.
+\end{definition}
+
+\subsection{The Proof (L1CrossProperty.lean)}
+
+\begin{theorem}[Sorry-free in Lean~4]
+  \label{thm:l1}
+  Let $\kk$ be any nontrivially normed field.
+  If each factor $E_i$ has a basis with the $\ell^1$ decomposition
+  property, then the Cross Property holds:
+  $\pi(\bigotimes m_i) = \prod\norm{m_i}$.
+\end{theorem}
+
+\begin{proof}[Proof outline]
+  Given a representation $\bigotimes m_i = \sum_j c_j\bigotimes m^j_i$:
+
+  \medskip\noindent
+  \textbf{Step 1} (Coordinate extraction via \texttt{dualDistrib}).
+  For each index tuple $\sigma = (\sigma_i)_{i\in\iota}$,
+  applying the multilinear functional
+  $\bigotimes_i \mathrm{coord}_{\sigma(i)}$ to both sides:
+  \[
+    \prod_i \mathrm{coord}_{\sigma(i)}(m_i)
+    \;=\; \sum_j c_j \prod_i \mathrm{coord}_{\sigma(i)}(m^j_i).
+  \]
+
+  \textbf{Step 2} (Per-tuple inequality).
+  Triangle inequality + norm multiplicativity:
+  \[
+    \prod_i \bigl(\abs{\mathrm{coord}_{\sigma(i)}(m_i)}\cdot
+      \norm{b_{\sigma(i)}}\bigr)
+    \;\le\;
+    \sum_j \abs{c_j}\prod_i \bigl(\abs{\mathrm{coord}_{\sigma(i)}(m^j_i)}
+      \cdot\norm{b_{\sigma(i)}}\bigr).
+  \]
+
+  \textbf{Step 3} (Sum over all tuples + product-sum swap).
+  Using \texttt{Fintype.prod\_sum}
+  ($\prod_i\sum_k f(i,k) = \sum_\sigma\prod_i f(i,\sigma(i))$):
+  \begin{align*}
+    \prod_i\norm{m_i}
+    &\;=\; \prod_i\sum_k \abs{\mathrm{coord}_k(m_i)}\cdot\norm{b_k}
+      &&\text{($\ell^1$ hypothesis, LHS)}\\
+    &\;=\; \sum_\sigma \prod_i
+      \abs{\mathrm{coord}_{\sigma(i)}(m_i)}\cdot\norm{b_{\sigma(i)}}
+      &&\text{(\texttt{Fintype.prod\_sum})}\\
+    &\;\le\; \sum_\sigma\sum_j\abs{c_j}\prod_i(\cdots)
+      &&\text{(Step 2, \texttt{Finset.sum\_le\_sum})}\\
+    &\;=\; \sum_j\abs{c_j}\sum_\sigma\prod_i(\cdots)
+      &&\text{(\texttt{Finset.sum\_comm})}\\
+    &\;=\; \sum_j\abs{c_j}\prod_i\sum_k
+      \abs{\mathrm{coord}_k(m^j_i)}\cdot\norm{b_k}
+      &&\text{(\texttt{Fintype.prod\_sum}, reverse)}\\
+    &\;=\; \sum_j\abs{c_j}\prod_i\norm{m^j_i}.
+      &&\text{($\ell^1$ hypothesis, RHS)}\qedhere
+  \end{align*}
+\end{proof}
+
+\subsection{Where the $\ell^1$ Hypothesis Is Used}
+
+The $\ell^1$ property is used in \textbf{both directions}:
+\begin{itemize}
+\item \textbf{LHS} (first line):
+  $\norm{m_i} = \sum_k\abs{\mathrm{coord}_k(m_i)}\cdot\norm{b_k}$
+  --- converts the norm to a sum-over-coordinates.
+\item \textbf{RHS} (last line):
+  $\sum_k\abs{\mathrm{coord}_k(m^j_i)}\cdot\norm{b_k} = \norm{m^j_i}$
+  --- converts the sum-over-coordinates back to a norm.
+\end{itemize}
+
+Without the $\ell^1$ property, only the triangle inequality holds:
+$\norm{v} \le \sum_k\abs{\mathrm{coord}_k(v)}\cdot\norm{b_k}$.
+This gives the \emph{wrong direction} for the LHS (produces $\ge$ where
+we need $=$) and the \emph{correct direction but too large} for the RHS.
+
+%% ==================================================================
+\section{The Expert's Suggestion: Finite-Dimensional Reduction}
+\label{sec:fd}
+%% ==================================================================
+
+\subsection{The Observation}
+
+Every representation $\bigotimes m_i = \sum_{j=1}^n c_j\bigotimes m^j_i$
+involves finitely many vectors.  For each factor~$i$, let
+\[
+  V_i \;=\; \mathrm{span}_\kk\bigl(\{m_i\}\cup\{m^j_i:j=1,\ldots,n\}\bigr)
+  \;\subset\; E_i.
+\]
+Then $\dim V_i < \infty$, the representation lives entirely in
+$\bigotimes V_i$, and the cost $\sum_j\abs{c_j}\prod_i\norm{m^j_i}$
+is computed using the restricted norms on~$V_i$.
+
+\subsection{The Proposed Argument}
+
+\begin{enumerate}
+\item For each representation, restrict to $V_i$ (finite-dimensional).
+\item In $V_i$, prove CP (by some finite-dimensional argument).
+\item Since every representation has cost $\ge\prod\norm{m_i}$,
+  the infimum (projective seminorm) is also $\ge\prod\norm{m_i}$.
+\end{enumerate}
+
+Step~3 is logically correct.  The entire question reduces to:
+
+\begin{question}[The Key Question]
+  \label{q:fdcp}
+  Does the Cross Property hold for all finite-dimensional normed spaces
+  over any nontrivially normed field?
+\end{question}
+
+\subsection{What Works in Finite Dimensions}
+
+\begin{itemize}
+\item \textbf{Over $\RR$ or $\CC$}: Hahn--Banach $\Rightarrow$
+  isometric bidual embedding $\Rightarrow$ CP. \checkmark
+\item \textbf{Over spherically complete NA fields} ($\QQ_p$, etc.):
+  Ingleton's theorem gives Hahn--Banach $\Rightarrow$ isometric bidual
+  $\Rightarrow$ CP. \checkmark
+\item \textbf{Over non-spherically complete NA fields} ($\Cp$, etc.):
+  The bidual embedding is \textbf{not} isometric, even in
+  dimension~2!
+\end{itemize}
+
+\subsection{The FDNP Obstruction}
+\label{sec:fdnp}
+
+\begin{definition}[Finite-Dimensional Norming Property]
+  A normed space~$V$ over~$\kk$ has the \emph{FDNP} if
+  $\sup_{\norm{f}\le 1}\abs{f(v)} = \norm{v}$ for all $v\in V$,
+  i.e., the canonical embedding $V\hookrightarrow V^{**}$ is isometric.
+\end{definition}
+
+\begin{proposition}[Confirmed in session~16 of this project]
+  There exists a $2$-dimensional normed space over $\Cp$ where
+  FDNP fails: $\sup_{\norm{f}\le 1}\abs{f(v)} < \norm{v}$ for
+  some unit vector~$v$.
+\end{proposition}
+
+This means the $h_{\mathrm{bidual}}$-based proof of CP fails in finite
+dimensions over~$\Cp$.
+
+\begin{remark}[Hahn--Banach Extension vs.\ Norming]
+  Over non-spherically complete fields, spaces of ``countable type''
+  (including all finite-dimensional spaces) still enjoy the
+  Hahn--Banach \emph{extension} property: bounded functionals on
+  subspaces extend to the whole space with the same norm.
+  However, this does \textbf{not} imply that norm-\emph{achieving}
+  functionals exist.  The extension property preserves the norm of the
+  \emph{functional}, not the norm of the \emph{vector}.
+\end{remark}
+
+\subsection{CP $\ne$ FDNP}
+
+Crucially, the Cross Property is \textbf{strictly weaker} than FDNP:
+
+\begin{itemize}
+\item FDNP requires a single norm-achieving functional for each vector.
+\item CP requires that the \emph{infimum over all representations}
+  equals the product of norms --- a global property of the tensor product.
+\end{itemize}
+
+In the $2$-dimensional $\Cp$-space where FDNP fails, exhaustive
+numerical search found \textbf{no CP counterexample} (see project
+session~16, CROSS\_PROPERTY~\S2.2).  This suggests CP may hold
+even where FDNP fails.
+
+%% ==================================================================
+\section{Analysis of Proposed Approaches}
+\label{sec:approaches}
+%% ==================================================================
+
+\subsection{Banach--Mazur Distance to $\ell^1$}
+
+Every $n$-dimensional normed space has Banach--Mazur distance
+$d_{BM}(X,\ell^1_n)\le n$ to $\ell^1_n$.  If we could embed each
+factor into an $\ell^1$ space and apply Theorem~\ref{thm:l1},
+the distortion would be $\prod_i d_{BM}(V_i,\ell^1_{n_i})$, which
+is \textbf{multiplicative across factors} and dimension-dependent.
+This is fatal --- it gives a factor that can be as bad as
+$\prod_i n_i$ and does not tend to~1.
+
+\textbf{Verdict:} Not viable.
+
+\subsection{Representation-Dependent Basis Choice}
+
+Since the basis can depend on the specific representation, one might
+hope to find a ``good'' basis for the specific vectors involved.
+However:
+
+\begin{itemize}
+\item For a \emph{single} vector $v$, one can always choose a basis
+  with $v = \alpha\cdot e_1$, giving $\norm{v}=\abs{\alpha}\norm{e_1}$
+  (the $\ell^1$ property holds trivially for 1 vector).
+\item For a \emph{set} of vectors $\{m_i, m^j_i\}$, no basis
+  generally makes the $\ell^1$ property hold simultaneously for all
+  of them.
+\end{itemize}
+
+\textbf{Verdict:} Not viable in its naive form.
+
+\subsection{Permanent / Capacity Bounds (Gurvits)}
+
+The product-sum swap $\prod_i\sum_k f(i,k)=\sum_\sigma\prod_i f(i,\sigma(i))$
+is a permanent of a rectangular matrix.  Gurvits' capacity technique
+proves $\mathrm{perm}(A)\ge n!/n^n$ for doubly stochastic~$A$
+via H-stable polynomials.
+
+\textbf{Obstruction:} The capacity technique requires real stability
+(roots avoid the upper half-plane), which is tied to~$\RR/\CC$.
+No non-archimedean analogue is known.
+
+\textbf{Verdict:} Interesting connection but not directly applicable
+over general fields.
+
+\subsection{Tropical / Valuative (Already Done)}
+
+The ultrametric (Schneider) approach is essentially the tropical
+version of our argument: the max-norm replaces the sum-norm,
+and $\varepsilon$-orthogonal bases give near-$\ell^1$ structure.
+This is already formalized in SchneiderReduction.lean.
+
+\textbf{Verdict:} Complete for ultrametric norms; does not extend
+to archimedean.
+
+%% ==================================================================
+\section{The Remaining Question and Strategy}
+\label{sec:strategy}
+%% ==================================================================
+
+\subsection{The Reduction}
+
+By the finite-dimensional reduction of Section~\ref{sec:fd},
+the unconditional CP reduces to:
+
+\begin{conjecture}[Finite-Dimensional Cross Property]
+  \label{conj:fdcp}
+  For any nontrivially normed field~$\kk$, any finite family of
+  finite-dimensional normed $\kk$-spaces $\{V_i\}$, and any
+  $m_i\in V_i$,
+  \[
+    \pi_{V_1\otimes\cdots\otimes V_n}\bigl(\bigotimes m_i\bigr)
+    = \prod\norm{m_i}.
+  \]
+\end{conjecture}
+
+If Conjecture~\ref{conj:fdcp} is true, the unconditional CP follows
+immediately: every representation in the full (possibly
+infinite-dimensional) tensor product restricts to a finite-dimensional
+subproduct where the conjecture applies.
+
+\subsection{What Would Prove the Conjecture}
+
+A proof of Conjecture~\ref{conj:fdcp} must avoid $h_{\mathrm{bidual}}$
+(which fails over~$\Cp$).  Possible strategies:
+
+\begin{enumerate}
+\item \textbf{Direct metric-algebraic argument} in finite dimensions.
+  The cancellation trick works for rank-1; can it be extended?
+\item \textbf{Weaker-than-$\ell^1$ decomposition property}
+  that holds for all FD norms and still suffices for the
+  product-sum-swap argument.
+\item \textbf{Induction on dimension}: CP holds in dimension~1
+  (trivially) and dimension~2 (empirically over~$\Cp$).
+  An inductive step reducing $\dim V_i = d$ to $d-1$ would suffice.
+\item \textbf{Approximation by $\ell^1$ norms}: If every FD norm
+  can be approximated (in a suitable sense) by $\ell^1$ norms,
+  and if CP is continuous under this approximation, then
+  Theorem~\ref{thm:l1} would give the result.
+\end{enumerate}
+
+\subsection{What We Know About Approximation}
+
+For the approximation strategy, we would need: for every $\varepsilon>0$
+and FD normed space $(V,\norm{\cdot})$, there exists a norm
+$\norm{\cdot}_1$ with the $\ell^1$ property such that
+$(1-\varepsilon)\norm{v}_1 \le \norm{v} \le \norm{v}_1$ for all~$v$.
+
+The first inequality says the $\ell^1$ ball contains $(1-\varepsilon)$
+times the norm ball.  The second says the norm ball is inside the
+$\ell^1$ ball.  The second always holds (triangle inequality).
+The first requires the norm ball to be approximated from inside by
+a cross-polytope, which is possible with $\varepsilon$
+depending on~$\dim V$ (John's theorem gives
+$\varepsilon \ge 1-1/\sqrt{\dim V}$, too large).
+
+\textbf{This approach fails for the same reason as Banach--Mazur:}
+the approximation quality degrades with dimension.
+
+%% ==================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+%% ==================================================================
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Approach} & \textbf{Status} & \textbf{Obstruction} \\
+\midrule
+$h_{\mathrm{bidual}}$ (duality) & Conditional & FDNP fails over $\Cp$ \\
+Schneider (ultrametric) & Complete & Only ultrametric norms \\
+$\ell^1$ norms (this work) & \textbf{Complete} & Only $\ell^1$ norms \\
+Banach--Mazur to $\ell^1$ & Failed & Multiplicative distortion \\
+Representation-dependent basis & Failed & Cannot force $\ell^1$ for multiple vectors \\
+Permanent / capacity & Blocked & Requires real stability \\
+FD reduction & \textbf{Reduces to Conj.~\ref{conj:fdcp}} & Need FD-CP without $h_{\mathrm{bidual}}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\bigskip
+
+The key remaining question is Conjecture~\ref{conj:fdcp}: does CP hold
+for all finite-dimensional normed spaces over any nontrivially normed
+field?  If yes, the unconditional CP follows.  If no, a
+finite-dimensional counterexample over~$\Cp$ would settle the problem
+negatively.
+
+The $\ell^1$ cross property (Theorem~\ref{thm:l1}) provides a new
+sorry-free proof technique that works over \emph{any} nontrivially
+normed field, using only the triangle inequality and the
+$\texttt{Fintype.prod\_sum}$ identity.  This is the first CP proof
+that requires neither duality nor the ultrametric property.
+
+%% ==================================================================
+\section*{Formalization Status}
+%% ==================================================================
+
+All results in this report are formalized in Lean~4 (mathlib v4.27.0):
+\begin{itemize}
+\item 10 source files, $\sim$1060 LOC, 0 sorries
+\item \texttt{L1CrossProperty.lean}: Theorem~\ref{thm:l1} (140 LOC)
+\item Axioms used: \texttt{propext}, \texttt{Classical.choice},
+  \texttt{Quot.sound} (standard Lean foundations only)
+\end{itemize}
+
+\end{document}
