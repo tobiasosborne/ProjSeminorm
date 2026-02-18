@@ -7,3 +7,4 @@ import ProjSeminorm.DirectApproach
 import ProjSeminorm.Counterexample
 import ProjSeminorm.CancellationTrick
 import ProjSeminorm.SchneiderReduction
+import ProjSeminorm.L1CrossProperty
